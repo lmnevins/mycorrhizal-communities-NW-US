@@ -219,6 +219,21 @@ contams = isContaminant(seqtab.nochim, neg = meta$Control, normalize = TRUE)
 table(contams$contaminant) # how many taxa are contaminants?
 write.csv(contams, file = "./likely_contaminants.csv", row.names = TRUE)
 
+
+# Inspect the control samples 
+controls <- seqtab.nochim[194:198, ]
+
+# Filter to only include columns that have value > 0
+controls <- as.data.frame(controls)
+
+controls <- controls[, colSums(controls > 0) > 0]
+
+# transpose to make it easier to read 
+controls <- t(controls)
+
+
+
+
 # remove contaminant sequences and control samples from both tables, respectively ####
 seqtab.nochim = seqtab.nochim[,(which(contams$contaminant != TRUE))]
 seqtab.nochim = seqtab.nochim[meta$Control == FALSE,]
