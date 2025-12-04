@@ -43,6 +43,17 @@ library(cowplot); packageVersion("cowplot")
 #                                                                               #
 #################################################################################
 
+## If just running analyses, skip to STEP 2 
+
+#################################################################################
+
+################ --
+# (1) DATA PREP
+################ --
+
+## GOAL: Create cleaned and transformed phyloseq object for all downstream analyses 
+
+
 # Load phyloseq object produced from the subset of the funguild community 
 ps_AM <- readRDS("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_phyloseq_final_2025.RDS")
 
@@ -121,7 +132,7 @@ ps_AM_final <- phyloseq(tax_table(tax_table(ps_AM)),
                         sample_data(ps_AM))
 
 
-# Getting to know your phyloseq data ####
+# Getting to know your phyloseq data #### -- 
 
 # number of taxa - 363
 ntaxa(ps_AM_final)
@@ -143,10 +154,10 @@ otu_table(ps_AM_final) %>% View()
 seq_counts <- otu_table(ps_AM_final) %>% rowSums() %>% as.data.frame()
 
 
-####### 
+####### -- 
 # Note: There are 16 trees with <10 ASV's -> for due diligence should run the analyses without 
 # them and see if it makes a difference. For now will retain. 
-######
+###### -- 
 
 
 # Remove one tree, S-TABR-01, that doesn't have any reads 
@@ -182,7 +193,7 @@ sample_metadata <- read.csv("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyse
 sample_metadata <- column_to_rownames(sample_metadata, "X")
 
 
-#############
+############# -- 
 # Save for untransformed final phyloseq 
 
 saveRDS(ps_AM_final, file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_phyloseq_func_subset_final_2025.RDS")
@@ -190,14 +201,14 @@ saveRDS(ps_AM_final, file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyse
 # This should be used for the differential abundance analyses later on 
 
 
-#############
+############# -- 
 # Save 'matrix' which now has functional info matched up to OTU's and taxa
 write.csv(matrix, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/matched_OTU_funcs_AM.csv")
 
-#############
+############# -- 
 
 
-####### more data exploration #########
+####### more data exploration ######### -- 
 
 #check rarefaction curve 
 #using raw counts asv table 
@@ -239,14 +250,31 @@ ps_AM_clr <- phyloseq(tax_table(tax_table(ps_AM_final)),
                      sample_data(sample_metadata))
 
 
-#####################
+##################### -- 
 # save phyloseq object with transformed data 
 saveRDS(ps_AM_clr, file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_phyloseq_transformed_final.RDS")
 
 ## This is the phyloseq object to be used in all downstream analyses 
-#####################
+##################### -- 
 
-#####################Beta-diversity##########################################
+#################################################################################
+
+## SKIP TO HERE ## 
+
+######################################## --
+# (2) ANALYSES OF COMMUNITY COMPOSITION
+######################################## --
+
+## GOAL: Analyze the taxonomic composition of the AMF communities.  
+
+
+# Load in ps_AM_clr dataframe 
+ps_AM_clr <- readRDS("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_phyloseq_transformed_final.RDS")
+
+
+# Pull out otu table to generate 'clr_AM' dataframe 
+clr_AM <- otu_table(ps_AM_clr) %>% as.matrix() %>% as.data.frame()
+
 
 ## Beta-diversity can be calculated using Aitchison Distance, which is essentially the euclidian
 # distance calculated between pairs of samples that have been transformed by CLR
@@ -351,6 +379,116 @@ PCA_plot_site <- ggplot(scores.pca_clr_AM, aes(x = PC1, y = PC2, color = Site)) 
 
 PCA_plot_site
 
+
+## Try out a way to visualize differences in the communities along these two axes: 
+
+
+### Calculate average PC1 score for each site, compare statistically 
+
+PC1_site <- dplyr::select(scores.pca_clr_AM, PC1, Site, Host_ID)
+
+PC1_site_summary <- PC1_site %>%
+  group_by(Site) %>%
+  summarise(
+    mean_PC1 = mean(PC1, na.rm = TRUE),
+    sd_PC1   = sd(PC1, na.rm = TRUE),
+    n        = n(),
+    se_PC1   = sd_PC1 / sqrt(n)
+  )
+
+
+# Test for significant differences between species 
+aov_PC1_site <- aov(PC1 ~ Site, data = PC1_site)
+summary(aov_PC1_site) # Significant
+
+tuk_PC1_site <- TukeyHSD(aov_PC1_site)
+tuk_PC1_site
+
+# Significant differences between sites 
+# Northern-Andrews p = 0.0000008
+# Southern-Northern p = 0.0000010
+# WFDP-Northern p = 0.0055585
+
+
+# Visualize 
+
+# Define preferred order
+site_order <- c("Northern", "WFDP", "Andrews", "Southern")
+
+# Apply to site data
+PC1_site_summary$Site <- factor(PC1_site_summary$Site, levels = site_order)
+
+
+PC1_site_plot <- ggplot(PC1_site_summary, aes(x = Site, y = mean_PC1, fill = Site)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = mean_PC1 - se_PC1, ymax = mean_PC1 + se_PC1), width = 0.2) +
+  theme_bw() +
+  scale_fill_manual(values=palette, 
+                    name="Site",
+                    breaks=c("Northern", "WFDP", "Andrews", "Southern"),
+                    labels=c("Northern", "WFDP", "Andrews", "Southern")) + 
+  labs(title = "", x = "", y = "PCA Axis 1") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 11)) +
+  theme(legend.title = element_text(colour="black", size=12, face="bold")) +
+  theme(legend.text = element_text(colour="black", size = 11))
+
+PC1_site_plot
+
+## Need to add significance values to this but they are a bit complicated, 
+# so can come back and do this 
+
+
+### Calculate average PC2 score for each site, compare statistically 
+
+PC2_site <- dplyr::select(scores.pca_clr_AM, PC2, Site, Host_ID)
+
+PC2_site_summary <- PC2_site %>%
+  group_by(Site) %>%
+  summarise(
+    mean_PC2 = mean(PC2, na.rm = TRUE),
+    sd_PC2   = sd(PC2, na.rm = TRUE),
+    n        = n(),
+    se_PC2   = sd_PC2 / sqrt(n)
+  )
+
+# Test for significant differences between sites
+aov_PC2_site <- aov(PC2 ~ Site, data = PC2_site)
+summary(aov_PC2_site) # Significant
+
+tuk_PC2_site <- TukeyHSD(aov_PC2_site)
+tuk_PC2_site
+
+# Significant differences between sites
+# Southern-Andrews p = 0.0227669
+# Southern-Northern p = 0.0455868
+
+
+# Visualize 
+
+# Apply order to site data
+PC2_site_summary$Site <- factor(PC2_site_summary$Site, levels = site_order)
+
+
+PC2_site_plot <- ggplot(PC2_site_summary, aes(x = Site, y = mean_PC2, fill = Site)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = mean_PC2 - se_PC2, ymax = mean_PC2 + se_PC2), width = 0.2) +
+  theme_bw() +
+  scale_fill_manual(values=palette, 
+                    name="Site",
+                    breaks=c("Northern", "WFDP", "Andrews", "Southern"),
+                    labels=c("Northern", "WFDP", "Andrews", "Southern")) + 
+  labs(title = "", x = "", y = "PCA Axis 2") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 11)) +
+  theme(legend.title = element_text(colour="black", size=12, face="bold")) +
+  theme(legend.text = element_text(colour="black", size = 11))
+
+PC2_site_plot
+
+## Need to add significance values to this but they are a bit complicated, 
+# so can come back and do this 
+
+#### -- 
+
 # Plot the Results by host alone
 PCA_plot_host <- ggplot(scores.pca_clr_AM, aes(x = PC1, y = PC2, color = Host_ID)) +
   geom_point(size = 3) +
@@ -373,6 +511,101 @@ PCA_plot_host <- ggplot(scores.pca_clr_AM, aes(x = PC1, y = PC2, color = Host_ID
   )
 
 PCA_plot_host
+
+
+
+### Calculate average PC1 score for each host, compare statistically 
+
+PC1_host <- dplyr::select(scores.pca_clr_AM, PC1, Site, Host_ID)
+
+PC1_host_summary <- PC1_host %>%
+  group_by(Host_ID) %>%
+  summarise(
+    mean_PC1 = mean(PC1, na.rm = TRUE),
+    sd_PC1   = sd(PC1, na.rm = TRUE),
+    n        = n(),
+    se_PC1   = sd_PC1 / sqrt(n)
+  )
+
+
+# Test for significant differences between hosts 
+aov_PC1_host <- aov(PC1 ~ Host_ID, data = PC1_host)
+summary(aov_PC1_host) # NOT Significant
+
+tuk_PC1_host <- TukeyHSD(aov_PC1_host)
+tuk_PC1_host
+
+# NO Significant differences between hosts
+
+
+
+# Visualize 
+
+PC1_host_plot <- ggplot(PC1_host_summary, aes(x = Host_ID, y = mean_PC1, fill = Host_ID)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = mean_PC1 - se_PC1, ymax = mean_PC1 + se_PC1), width = 0.2) +
+  theme_bw() +
+  scale_fill_manual(values=AM_hosts, 
+                    name="Host Tree Species",
+                    breaks=c("ALRU", "TABR", "THPL"),
+                    labels=c("ALRU", "TABR", "THPL")) + 
+  labs(title = "", x = "", y = "PCA Axis 1") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 11)) +
+  theme(legend.title = element_text(colour="black", size=12, face="bold")) +
+  theme(legend.text = element_text(colour="black", size = 11))
+
+PC1_host_plot
+
+## Need to add significance values to this but they are a bit complicated, 
+# so can come back and do this 
+
+
+### Calculate average PC2 score for each host, compare statistically 
+
+PC2_host <- dplyr::select(scores.pca_clr_AM, PC2, Site, Host_ID)
+
+PC2_host_summary <- PC2_host %>%
+  group_by(Host_ID) %>%
+  summarise(
+    mean_PC2 = mean(PC2, na.rm = TRUE),
+    sd_PC2   = sd(PC2, na.rm = TRUE),
+    n        = n(),
+    se_PC2   = sd_PC2 / sqrt(n)
+  )
+
+# Test for significant differences between hosts
+aov_PC2_host <- aov(PC2 ~ Host_ID, data = PC2_host)
+summary(aov_PC2_host) # Significant
+
+tuk_PC2_host <- TukeyHSD(aov_PC2_host)
+tuk_PC2_host
+
+# Significant difference between hosts
+# TABR-ALRU p = 0.0227506
+
+
+# Visualize 
+
+PC2_host_plot <- ggplot(PC2_host_summary, aes(x = Host_ID, y = mean_PC2, fill = Host_ID)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = mean_PC2 - se_PC2, ymax = mean_PC2 + se_PC2), width = 0.2) +
+  theme_bw() +
+  scale_fill_manual(values=AM_hosts, 
+                    name="Host Tree Species",
+                    breaks=c("ALRU", "TABR", "THPL"),
+                    labels=c("ALRU", "TABR", "THPL")) + 
+  labs(title = "", x = "", y = "PCA Axis 2") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 11)) +
+  theme(legend.title = element_text(colour="black", size=12, face="bold")) +
+  theme(legend.text = element_text(colour="black", size = 11))
+
+PC2_host_plot
+
+## Need to add significance values to this but they are a bit complicated, 
+# so can come back and do this 
+
+#### -- 
+
 
 
 #####assess multivariate homogeneity of sites###########
