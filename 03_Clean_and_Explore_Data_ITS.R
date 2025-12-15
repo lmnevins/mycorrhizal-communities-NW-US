@@ -3,11 +3,11 @@
 # Original Author: Geoffrey Zahn
 # Modified by: L. McKinley Nevins 
 # July 5, 2024
-# Software versions:  R v 4.2.1
-#                     tidyverse v 1.3.2
-#                     ShortRead v 
-#                     phyloseq v 1.42.0
-#                     Biostrings v 2.66.0
+# Software versions:  R v 4.4.1
+#                     tidyverse v 2.0.0
+#                     ShortRead v 1.62.0
+#                     phyloseq v 1.48.0
+#                     Biostrings v 2.72.1
 
 # -----------------------------------------------------------------------------#
 
@@ -26,6 +26,12 @@ library(ShortRead); packageVersion("ShortRead")
 library(Biostrings); packageVersion("Biostrings")
 library(microViz)
 
+
+
+wd <- "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/"
+setwd(wd)
+
+
 # load phyloseq object with phylogenetic tree ####
 
 ps_ITS <- readRDS("./Phylogeny_Outputs/ITS_ps_not-cleaned_w_tree.RDS") # change to non-phylogeny stuff
@@ -38,6 +44,9 @@ non_fung <- tax_table(ps_nonfungi) %>% as("matrix") %>% as.data.frame()
 
 #Check what was in the controls 
 ps_ITS_control <- ps_filter(ps_ITS, Host_ID == "Control")
+
+#look at non-fungi 
+control <- tax_table(ps_ITS_control) %>% as("matrix") %>% as.data.frame()
 
 #filter to remove controls - using the microViz package
 ps_ITS <- ps_filter(ps_ITS, Host_ID != "Control")
@@ -88,9 +97,11 @@ saveRDS(seqs,"./Phylogeny_Outputs/ITS_ASV_reference_sequences.RDS")
 saveRDS(ps_ITS, file = "./Phylogeny_Outputs/ITS_clean_phyloseq_object.RDS")
 ps_ITS
 
-##########################################################################################
-# save OTU table separately to be processed by FUNGuild
- 
+#####################################################################################
+
+## Save to appropriate FUNGuild format by adding a 'taxonomy' column 
+
+
 ps_ITS_otu <- otu_table(ps_ITS) %>% as("matrix") %>% as.data.frame()
 
 # for the FUNGuild format, the samples need to be in the header and the OTU's need 
@@ -98,7 +109,6 @@ ps_ITS_otu <- otu_table(ps_ITS) %>% as("matrix") %>% as.data.frame()
 
 #transpose the columns and rows of the otu table 
 ps_ITS_otu <- t(ps_ITS_otu)
-#worked
 
 
 # then there needs to be a column at the end called 'taxonomy', which has the data assigned 
@@ -110,7 +120,7 @@ ps_ITS_tax <- tax_table(ps_ITS) %>% as("matrix") %>% as.data.frame()
 
 # now just need to merge the taxonomic ranks into one column of ; separated values 
 ps_ITS_tax$taxonomy <- paste(ps_ITS_tax$Kingdom, ps_ITS_tax$Phylum, ps_ITS_tax$Class, ps_ITS_tax$Order,
-                       ps_ITS_tax$Family, ps_ITS_tax$Genus, ps_ITS_tax$Species, sep=";")
+                             ps_ITS_tax$Family, ps_ITS_tax$Genus, ps_ITS_tax$Species, sep=";")
 
 #subset to get just the otu and taxonomy columns (OTU's are rownames right now)
 ps_ITS_tax <- select(ps_ITS_tax, taxonomy)
@@ -131,6 +141,5 @@ write.csv(ITS_table, "./FUNGuild/EM_OTU_table.csv")
 #to doublecheck it, and delete that first column. 
 
 
-
-
+## -- END -- ##
 
