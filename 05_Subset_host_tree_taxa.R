@@ -1,8 +1,9 @@
 # -----------------------------------------------------------------------------#
-# Take EM and AM communities from FunGuild and subset to target host tree taxa
+# Take EM and AM communities from FungalTraits and FunGuild processing to 
+# guilds and subset to target host tree taxa
 # Original Author: L. McKinley Nevins 
-# July 29, 2024 for EM
 # March 11, 2025 for AM
+# December 15, 2025 for EM
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
 #                     phyloseq v 1.48.0
@@ -21,17 +22,25 @@ library(vegan); packageVersion("vegan")
 #  CONU and PIMO do not have full coverage across the study sites and need to   #
 #  be removed before all of the community analyses. This will leave in the AM   #
 #  community: ALRU, TABR, AND THPL. In the EM community: ABAM, ABGR, ABPR,      #
-#  ALRU, PSME, TABR, THPL, TSHE. The resulting files should be used for all of  #
-#  the downstream analyses.                                                     #
+#  ALRU, PSME, TABR, TSHE. The resulting files should be used for all of the    #
+#  downstream analyses.                                                         #
 #                                                                               #
 #################################################################################
 
+################ -- 
+# (1) DATA PREP
+################ -- 
+
+wd <- "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/"
+setwd(wd)
+
+
 ##phyloseq objects:
 # Load phyloseq object produced from filtered FUNGuild guilds to target just AM fungi ####
-ps_AM <- readRDS("./FINAL/AM_funguild_final_2025.RDS")
+ps_AM <- readRDS("./Phylogeny_Outputs/AM_funguild_final_2025.RDS")
 
 # Load phyloseq object produced from filtered FUNGuild guilds to target just EM fungi ####
-ps_EM <- readRDS("./FINAL/EM_funguild_final.RDS")
+ps_EM <- readRDS("./Phylogeny_Outputs/EM_funguild_final_2025.RDS")
 
 
 ##environmental data:
@@ -41,8 +50,10 @@ ps_EM <- readRDS("./FINAL/EM_funguild_final.RDS")
 env_AM <- read.csv(file = "./FINAL/AM_subset_sample_data_2025.csv", row.names = 1)
 
 # Load in the sample data file containing all of the environmental data for the EM community 
-# for the subset of 8 host tree species 
-env_EM <- read.csv(file = "./FINAL/EM_subset_sample_data.csv", row.names = 1)
+# for the subset of 7 host tree species, excluding THPL as it is only an AM host  
+
+# This results in 372 host trees 
+env_EM <- read.csv(file = "./FINAL/EM_subset_sample_data_2025.csv", row.names = 1)
 
 
 
@@ -82,18 +93,16 @@ ps_AM_final <- phyloseq(otu_table(AM_subset_otu), tax_table(tax_AM), sample_data
 # number of taxa - 438
 ntaxa(ps_AM_final)
 
-# number of samples - 133
+# number of samples - 130
 nsamples(ps_AM_final)
 
 asv <- otu_table(ps_AM_final) %>% as("matrix") %>% as.data.frame() # convert to matrix before you can convert to data frame
 
 sample_count <- rowSums(asv)
 
-sample_count <- as.data.frame(sample_count) #a few more trees that don't have asv's
+sample_count <- as.data.frame(sample_count)
 
-#subset to remove - now 131 trees 
-ps_AM_final <- subset_samples(ps_AM_final, sample_sums(ps_AM_final) > 0)
-
+# All trees have at least one ASV
 
 asv_count <- colSums(asv)
 
@@ -129,9 +138,9 @@ tax_EM <- phyloseq::tax_table(as.matrix(tax_EM))
 
 
 #read in the otu file of just the subset of EM target trees moving forward - 
-#8 of the 10 species excluding CONU and PIMO
+#7 of the 10 species excluding CONU, PIMO, and THPL
 #this was generated from the otu table from the EM funguild phyloseq object 
-EM_subset_otu <- read.csv("./FINAL/EM_subset_otu.csv")
+EM_subset_otu <- read.csv("./FINAL/EM_subset_otu_2025.csv")
 
 #need the samples to be row names
 EM_subset_otu <- data.frame(EM_subset_otu[,-1], row.names=EM_subset_otu[,1])
@@ -145,30 +154,28 @@ ps_EM_final <- phyloseq(otu_table(EM_subset_otu), tax_table(tax_EM), sample_data
 
 
 #inspect
-# number of taxa - 2,542
+# number of taxa - 2,343
 ntaxa(ps_EM_final)
 
-# number of samples - 425
+# number of samples - 372
 nsamples(ps_EM_final)
 
 asv <- otu_table(ps_EM_final) %>% as("matrix") %>% as.data.frame() # convert to matrix before you can convert to data frame
 
-sample_count <- rowSums(asv)
+sample_count <- rowSums(asv) %>% as.data.frame()
+#all trees with at least some ASV's
 
-sample_count <- as.data.frame(sample_count) #all trees with at least some ASV's
-
-asv_count <- colSums(asv)
-
-asv_count <- as.data.frame(asv_count) #some ASV's no longer present in the samples 
+asv_count <- colSums(asv) %>% as.data.frame()
+#some ASV's no longer present in the samples 
 
 #remove taxa that aren't present in this new subset 
 ps_EM_final <- subset_taxa(ps_EM_final, taxa_sums(ps_EM_final) > 0)
 
-# number of taxa - now 2,278
+# number of taxa - now 1,870
 ntaxa(ps_EM_final)
 
 #SAVE THE FINAL PHYLOSEQ OBJECT 
-saveRDS(ps_EM_final, file = "./FINAL/EM_phyloseq_final.RDS")
+saveRDS(ps_EM_final, file = "./FINAL/EM_phyloseq_final_2025.RDS")
 
 
 #now I can save the tax table and look at the community composition 
@@ -176,5 +183,5 @@ EM_tax <- tax_table(ps_EM_final)
 
 EM_tax <- as.data.frame(EM_tax)
 
-write.csv(EM_tax, "./FINAL/EM_subset_tax.csv")
+write.csv(EM_tax, "./FINAL/EM_subset_tax_2025.csv")
 
