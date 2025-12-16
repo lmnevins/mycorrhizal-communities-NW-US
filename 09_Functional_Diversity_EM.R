@@ -7,10 +7,10 @@
 #                     dplyr v 1.1.4
 #                     tibble v 3.2.1
 #                     fundiversity v 1.1.1
-#                     vegan v 2.6.6.1
+#                     vegan v 2.6.10
 #                     cluster v 2.1.8
 #                     FD v 1.0.12.3
-#                     ade4 v 1.7.22
+#                     ade4 v 1.7.23
 #                     phyloseq v 1.48.0
 #                     ape v 5.8.1
 #                     
@@ -31,7 +31,8 @@ library(ape); packageVersion("ape")
 #                               Main workflow                                   #
 #  Load in EM fungal taxa table, and the table of functions for genera that     #
 #  had successful assignments. Match them up and format into matrices for       #
-#  analyses of functional variation across sites and host species               #
+#  analyses of functional variation across sites and host species, including    #
+#  7 EMF hosts: ABAM, ABGR, ABPR, ALRU, PSME, TABR, TSHE                        #
 #                                                                               #
 #################################################################################
 
@@ -45,8 +46,8 @@ setwd(wd)
 ## Preparing the species x trait and species x site matrices 
 ###############
 
-# Load in table of all Genera and OTUs matched with functional classifications 
-funcs <- read.csv("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/matched_OTU_funcs_EM.csv")
+# Load in table of all Genera and ASVs matched with functional classifications 
+funcs <- read.csv("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/matched_OTU_funcs_EM_no_THPL.csv")
 
 
 # this has a categorical 'hydro' column for hydrophobicity, and a 'hydro_binary' column where it's been coded 
@@ -56,18 +57,18 @@ funcs <- read.csv("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/ma
 
 
 # Pull in phyloseq object with the clr transformed values for all downstream steps 
-ps_EM_clr <- readRDS("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_phyloseq_transformed_final.RDS")
+ps_EM_clr <- readRDS("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_phyloseq_transformed_final_no_THPL.RDS")
 
-# 424 trees and 1,941 ASVs
+# 371 trees and 1,627 ASVs
 
 
-# reformat funcs a tiny bit just to get OTU's as the species in rownames, and my traits only 
-traits_EM <- funcs %>% dplyr::select(OTU2, hydrophilic, hydrophobic, ET_contact, ET_contact_short, ET_short, ET_contact_medium,
+# reformat funcs a tiny bit just to get ASVs as the species in rownames, and my traits only 
+traits_EM <- funcs %>% dplyr::select(ASV2, hydrophilic, hydrophobic, ET_contact, ET_contact_short, ET_short, ET_contact_medium,
                                ET_contact_medium_fringe, ET_contact_medium_smooth, ET_medium_smooth, 
                                ET_medium_fringe, ET_medium_mat, ET_medium_long, ET_medium_long_smooth,
-                               ET_medium_long_fringe, ET_contact_long_smooth, ET_long) %>% column_to_rownames(var = "OTU2") 
+                               ET_medium_long_fringe, ET_contact_long_smooth, ET_long) %>% column_to_rownames(var = "ASV2") 
 
-#OTUs are now the row names and there are columns for the binary coding of each trait level 
+#ASVs are now the row names and there are columns for the binary coding of each trait level 
 
 
 ################## species by site matrix ########
@@ -110,27 +111,27 @@ rownames(tree_matrix_EM) <- tree_ids
 
 
 # Keep rownames
-otu_ids <- rownames(traits_EM)
+asv_ids <- rownames(traits_EM)
 
 traits_matrix_EM <- as.data.frame(traits_EM)
 traits_matrix_EM[] <- lapply(traits_matrix_EM, as.numeric)
 traits_matrix_EM <- as.matrix(traits_matrix_EM)
-rownames(traits_matrix_EM) <- otu_ids
+rownames(traits_matrix_EM) <- asv_ids
 
 # check for any NAs in the data 
 sum(is.na(tree_matrix_EM)) # None        
 sum(is.na(traits_matrix_EM))  # None   
 
-# Make sure OTUs match between traits and trees
-# Find shared OTUs between the two datasets 
-shared_otus <- intersect(colnames(tree_matrix_EM), rownames(traits_matrix_EM))
+# Make sure ASVs match between traits and trees
+# Find shared ASVs between the two datasets 
+shared_asvs <- intersect(colnames(tree_matrix_EM), rownames(traits_matrix_EM))
 # all are shared
 
-# set the OTU's to be in the same order 
-otu_order <- colnames(tree_matrix_EM)
+# set the ASVs to be in the same order 
+asv_order <- colnames(tree_matrix_EM)
 
 # reorder the trait matrix rows to match the tree matrix columns
-traits_matrix_EM <- traits_matrix_EM[otu_order, ]
+traits_matrix_EM <- traits_matrix_EM[asv_order, ]
 
 # double check alignment 
 all(colnames(tree_matrix_EM) == rownames(traits_matrix_EM)) #TRUE
@@ -311,7 +312,7 @@ ET_diverging
 
 # Save traits_diverging dataframe to use in future analyses 
 
-write.csv(traits_diverging, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_ET_clr_abund.csv")
+write.csv(traits_diverging, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_ET_clr_abund_no_THPL.csv")
 
 
 
@@ -339,7 +340,7 @@ neg_avg <- trait_avg %>%
 trait_avg_scaled <- bind_rows(pos_avg, neg_avg)
 
 # Save traits_avg_scaled dataframe to use in future analyses 
-write.csv(trait_avg_scaled, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_ET_avg_scaled.csv")
+write.csv(trait_avg_scaled, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_ET_avg_scaled_no_THPL.csv")
 
 
 # PLOT
@@ -505,7 +506,7 @@ host_hydro_plot <- ggplot(hydro_trait_avg_scaled, aes(x = Host_ID, y = mean_clr_
   geom_hline(yintercept = 0, color = "red", linewidth = 1) +
   theme_minimal() +
   labs(
-    x = "Tree",
+    x = "",
     y = "Relative Hydrophobicity Trait Abundance",
     fill = "Trait_clean") +
   theme(
@@ -522,9 +523,9 @@ host_hydro_plot
 # INTERPRETATION:
 
 # These plots are showing the clr-transformed abundance weighted trait values, so not raw abundance 
-# A positive value tells us that that trait is relatively more abundant than most of the other OTU's
+# A positive value tells us that that trait is relatively more abundant than most of the other ASVs
 # in the community, while a negative value tells us that the trait is relatively less abundant, 
-# because the OTUs that have that trait are relatively less abundant than other OTU's. 
+# because the ASVs that have that trait are relatively less abundant than other ASVs. 
 
 
 ########################################################
@@ -547,24 +548,16 @@ tree_abund_full <- tree_abund_df %>%
 
 # Reshape to long format
 tree_abund_long <- tree_abund_full %>%
-  pivot_longer(-c(Sample_code, Site, Host_ID), names_to = "OTU", values_to = "CLR_Abund")
+  pivot_longer(-c(Sample_code, Site, Host_ID), names_to = "ASV", values_to = "CLR_Abund")
 
 
 ## Merge with taxa data 
 # Pull out tax table from the trimmed table for taxa that have functional assignments 
 EM_tax <- tax_table(ps_EM_clr) %>% as("matrix") %>% as.data.frame()
 
-EM_tax <- as.data.frame(EM_tax) %>% rownames_to_column(var = "OTU")
+EM_tax <- as.data.frame(EM_tax) %>% rownames_to_column(var = "ASV")
 
-tree_tax_full <- merge(EM_tax, tree_abund_long, by = "OTU")
-
-
-# Clean up taxa names a bit 
-tree_tax_full <- tree_tax_full %>%
-  mutate(Genus = Genus %>%
-           str_replace_all("g__", "")) %>%
-  mutate(Species = Species %>%
-           str_replace_all("s__", ""))
+tree_tax_full <- merge(EM_tax, tree_abund_long, by = "ASV")
 
 # Clean up tree names a bit 
 tree_tax_full <- tree_tax_full %>%
@@ -840,7 +833,7 @@ mod_data <- merge(tree_scores, mod_traits, by = "id_code")
 
 
 # Also make a dataset for each individual tree instead 
-indiv_traits <- read.csv("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_ET_clr_abund.csv")
+indiv_traits <- read.csv("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_ET_clr_abund_no_THPL.csv")
 
 # reformat to get abundance for each trait and the sample_ID as the rownames 
 
@@ -861,7 +854,7 @@ indiv_traits <- read.csv("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/F
 
 # save indiv_matrix
   
-write.csv(indiv_matrix, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_tree_ET_clr.csv")
+write.csv(indiv_matrix, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_tree_ET_clr_no_THPL.csv")
   
   
 ## Get data summarized at the site_host level 
@@ -912,10 +905,7 @@ aitchison_EM_traits <- dist(indiv_matrix, method = "euclidean")
 # Beta diversity of each tree in functional space 
 
 # save Aitchison Distance matrix 
-save(aitchison_EM_traits, file="~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/aitchison_dist_EM_traits.Rdata")
-
-
-write.csv(mat, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/aitchison_traits_check.csv")
+save(aitchison_EM_traits, file="~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/aitchison_dist_EM_traits_no_THPL.Rdata")
 
 ## visualize ##
 
@@ -956,8 +946,8 @@ scores.pca_traits_EM$Host_ID <- as.factor(scores.pca_traits_EM$Host_ID)
 palette <- c("#580E70", "#47E5BB", "#F8BD4B", "#9D072C")
 
 # set colors for hosts 
-                   # ABAM        ABGR        ABPR          ALRU         PSME         TABR         THPL       TSHE        
-all_hosts <- c("#0D0887FF", "#5402A3FF", "#8B0AA5FF", "#B93289FF", "#DB5C68FF", "#F48849FF", "#ffe24cFF", "#fffd66")
+                   # ABAM        ABGR        ABPR          ALRU         PSME         TABR     TSHE        
+all_hosts <- c("#0D0887FF", "#5402A3FF", "#8B0AA5FF", "#B93289FF", "#DB5C68FF", "#F48849FF", "#fffd66")
 
 sites <- c(15,16,17,18)
 
@@ -973,8 +963,8 @@ PCA_traits_both_EM <- ggplot(scores.pca_traits_EM, aes(x = PC1, y = PC2, color =
                      labels=c("Northern", "WFDP", "Andrews", "Southern")) +
   scale_colour_manual(values=all_hosts, 
                       name="Host Tree Species",
-                      breaks=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "THPL", "TSHE"),
-                      labels=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "THPL", "TSHE")) +
+                      breaks=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE"),
+                      labels=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE")) +
   labs(x = paste0("PC1 (", round(pca_var_explained[1], 1), "%)"),
        y = paste0("PC2 (", round(pca_var_explained[2], 1), "%)"), 
        color = "Host_ID") +
@@ -1009,6 +999,7 @@ PCA_traits_site_EM <- ggplot(scores.pca_traits_EM, aes(x = PC1, y = PC2, color =
 
 PCA_traits_site_EM
 
+
 # Plot the Results by host alone
 PCA_traits_host_EM <- ggplot(scores.pca_traits_EM, aes(x = PC1, y = PC2, color = Host_ID)) +
   geom_point(size = 3) +
@@ -1016,8 +1007,8 @@ PCA_traits_host_EM <- ggplot(scores.pca_traits_EM, aes(x = PC1, y = PC2, color =
   theme_minimal(base_size = 11) +
   scale_colour_manual(values=all_hosts, 
                       name="Host Tree Species",
-                      breaks=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "THPL", "TSHE"),
-                      labels=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "THPL", "TSHE")) +
+                      breaks=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE"),
+                      labels=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE")) +
   labs(x = paste0("PC1 (", round(pca_var_explained[1], 1), "%)"),
        y = paste0("PC2 (", round(pca_var_explained[2], 1), "%)"), 
        color = "Host Tree Species") +
@@ -1056,9 +1047,9 @@ permutest(betadisper_traits_site)
 # Number of permutations: 999
 # 
 # Response: Distances
-#             Df Sum Sq Mean Sq      F N.Perm Pr(>F)   
-# Groups      3  1.214 0.40474 4.6758    999  0.003 **
-#   Residuals 408 35.317 0.08656                        
+#                  Df  Sum Sq Mean Sq      F N.Perm Pr(>F)   
+#      Groups      3  1.2701 0.42336 5.0857    999  0.002 **
+#   Residuals 358 29.8019 0.08325                        
 # ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
@@ -1085,17 +1076,17 @@ plot(mod.HSD)
 # Fit: aov(formula = distances ~ group, data = df)
 # 
 # $group
-# diff         lwr       upr     p adj
-# Northern-Andrews   0.04421403 -0.05722276 0.1456508 0.6746641
-# Southern-Andrews   0.13041232  0.02497869 0.2358460 0.0082901
-# WFDP-Andrews       0.12038894  0.01433873 0.2264392 0.0187968
-# Southern-Northern  0.08619829 -0.02010312 0.1924997 0.1574790
-# WFDP-Northern      0.07617491 -0.03073808 0.1830879 0.2570373
-# WFDP-Southern     -0.01002338 -0.12073569 0.1006889 0.9955093
+#                          diff         lwr       upr     p adj
+# Northern-Andrews   0.04219161 -0.064202206 0.14858542 0.7357404
+# Southern-Andrews   0.14923028  0.039108390 0.25935217 0.0029566
+# WFDP-Andrews       0.11696768  0.005392412 0.22854296 0.0357839
+# Southern-Northern  0.10703867 -0.003606425 0.21768377 0.0620696
+# WFDP-Northern      0.07477607 -0.037315619 0.18686777 0.3137894
+# WFDP-Southern     -0.03226260 -0.147898815 0.08337362 0.8890461
 
 # Significant differences between 
-# Southern - Andrews
-# WFDP - Andrews
+# Southern - Andrews = 0.003 *
+# WFDP - Andrews = 0.036 *
 
 
 # Nicer boxplot 
@@ -1114,7 +1105,7 @@ centroid_plot_EM <- ggplot(distances_EM, aes(x = Site, y = DistanceToCentroid, f
   geom_boxplot(outlier.shape = NA, alpha = 0.7) +
   geom_jitter(width = 0.15, size = 1.5, alpha = 0.6) +
   theme_minimal(base_size = 11) +
-  labs(x = "Site",
+  labs(x = "",
        y = "Distance to Centroid") +
   scale_fill_manual(values=palette, 
                     name="Site",
@@ -1144,9 +1135,9 @@ permutest(betadisper_traits_host)
 # Number of permutations: 999
 # 
 # Response: Distances
-#             Df Sum Sq  Mean Sq     F N.Perm Pr(>F)   
-# Groups      7  1.903 0.271788 3.116    999  0.005 **
-#   Residuals 404 35.238 0.087223                       
+#                  Df  Sum Sq  Mean Sq      F N.Perm Pr(>F)  
+#      Groups      6  1.2862 0.214374 2.4605    999  0.017 *
+#   Residuals 355 30.9303 0.087128                          
 # ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 # # 
@@ -1154,7 +1145,7 @@ permutest(betadisper_traits_host)
 
 #if the dispersion is different between groups, then examine
 plot(betadisper_traits_host, axes = c(1,2), ellipse = FALSE, segments = FALSE, lty = "solid", label = TRUE, 
-     label.cex = 0.8, col = c("#0D0887FF", "#5402A3FF", "#8B0AA5FF", "#B93289FF", "#DB5C68FF", "#F48849FF", "#ffe24cFF", "#fffd66"))
+     label.cex = 0.8, col = c("#0D0887FF", "#5402A3FF", "#8B0AA5FF", "#B93289FF", "#DB5C68FF", "#F48849FF", "#fffd66"))
 
 boxplot(betadisper_traits_host)
 mod.HSD_traits_host <- TukeyHSD(betadisper_traits_host)
@@ -1163,39 +1154,31 @@ plot(mod.HSD_traits_host)
 
 # $group
 #                 diff         lwr          upr     p adj
-# ABGR-ABAM -0.023526257 -0.19218871  0.145136202 0.9998847
-# ABPR-ABAM -0.076304955 -0.25673681  0.104126895 0.9028293
-# ALRU-ABAM -0.001796424 -0.18610050  0.182507655 1.0000000
-# PSME-ABAM  0.035887776 -0.13050186  0.202277415 0.9979695
-# TABR-ABAM -0.140886502 -0.31481117  0.033038166 0.2122576
-# THPL-ABAM -0.171371434 -0.34434335  0.001600480 0.0541950
-# TSHE-ABAM -0.073323263 -0.23971290  0.093066376 0.8819047
-# ABPR-ABGR -0.052778699 -0.23595565  0.130398248 0.9878822
-# ALRU-ABGR  0.021729833 -0.16526251  0.208722171 0.9999666
-# PSME-ABGR  0.059414032 -0.10994846  0.228776523 0.9628447
-# TABR-ABGR -0.117360245 -0.29413109  0.059410599 0.4676789
-# THPL-ABGR -0.147845178 -0.32367869  0.027988336 0.1731906
-# TSHE-ABGR -0.049797007 -0.21915950  0.119565484 0.9863444
-# ALRU-ABPR  0.074508531 -0.12316484  0.272181905 0.9455083
-# PSME-ABPR  0.112192731 -0.06889366  0.293279122 0.5601855
-# TABR-ABPR -0.064581547 -0.25261495  0.123451853 0.9669090
-# THPL-ABPR -0.095066479 -0.28221896  0.092086005 0.7808813
-# TSHE-ABPR  0.002981692 -0.17810470  0.184068083 1.0000000
-# PSME-ALRU  0.037684200 -0.14726072  0.222629115 0.9985900
-# TABR-ALRU -0.139090078 -0.33084226  0.052662106 0.3478171
-# THPL-ALRU -0.169575010 -0.36046344  0.021313421 0.1235027
-# TSHE-ALRU -0.071526839 -0.25647176  0.113418076 0.9377433
-# TABR-PSME -0.176774278 -0.35137788 -0.002170674 0.0448008
-# THPL-PSME -0.207259210 -0.38091379 -0.033604635 0.0074730
-# TSHE-PSME -0.109211039 -0.27631023  0.057888154 0.4889991
-# THPL-TABR -0.030484932 -0.21137216  0.150402297 0.9995922
-# TSHE-TABR  0.067563239 -0.10704037  0.242166842 0.9375732
-# TSHE-THPL  0.098048171 -0.07560640  0.271702746 0.6739890
+# ABGR-ABAM -0.011771788 -0.17582955  0.15228598 0.9999922
+# ABPR-ABAM -0.073588216 -0.24909405  0.10191762 0.8766310
+# ALRU-ABAM  0.005990242 -0.17328211  0.18526259 0.9999999
+# PSME-ABAM  0.030642930 -0.13120406  0.19248992 0.9977832
+# TABR-ABAM -0.149723983 -0.31890029  0.01945233 0.1217811
+# TSHE-ABAM -0.088364622 -0.25021162  0.07348237 0.6701413
+# ABPR-ABGR -0.061816427 -0.23999242  0.11635956 0.9471235
+# ALRU-ABGR  0.017762031 -0.16412518  0.19964925 0.9999516
+# PSME-ABGR  0.042414718 -0.12232397  0.20715340 0.9881654
+# TABR-ABGR -0.137952195 -0.30989698  0.03399259 0.2105337
+# TSHE-ABGR -0.076592833 -0.24133152  0.08814585 0.8129631
+# ALRU-ABPR  0.079578458 -0.11269819  0.27185510 0.8832187
+# PSME-ABPR  0.104231146 -0.07191136  0.28037365 0.5796120
+# TABR-ABPR -0.076135768 -0.25903562  0.10676409 0.8803319
+# TSHE-ABPR -0.014776406 -0.19091891  0.16136610 0.9999803
+# PSME-ALRU  0.024652688 -0.15524300  0.20454838 0.9996490
+# TABR-ALRU -0.155714226 -0.34223134  0.03080289 0.1713778
+# TSHE-ALRU -0.094354864 -0.27425055  0.08554083 0.7108618
+# TABR-PSME -0.180366913 -0.35020362 -0.01053020 0.0291749
+# TSHE-PSME -0.119007552 -0.28154473  0.04352963 0.3139174
+# TSHE-TABR  0.061359361 -0.10847735  0.23119607 0.9361063
 
 # significant differences are 
 
-# TABR-PSME
-# THPL-PSME
+# TABR-PSME = 0.029
 
 
 # Nicer boxplot 
@@ -1212,8 +1195,8 @@ centroid_plot_EM2 <- ggplot(distances_EM2, aes(x = Host, y = DistanceToCentroid,
        y = "Distance to Centroid") +
   scale_fill_manual(values=all_hosts, 
                     name="Host",
-                    breaks=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "THPL", "TSHE"),
-                    labels=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "THPL", "TSHE")) +
+                    breaks=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE"),
+                    labels=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE")) +
   theme(legend.position = "right") +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
@@ -1229,24 +1212,27 @@ centroid_plot_EM2
 permanova.site <- vegan::adonis2(indiv_matrix ~ Site, data = indiv_meta, method = "euclidean", permutations = 999)
 permanova.site
 
-# significant, and only 2.1% explained
+# significant, and only 2.2% explained
 
 
 permanova.host <- adonis2(indiv_matrix ~ Host_ID, data = indiv_meta, method = "euclidean", permutations = 999)
 permanova.host
 
-# significant, and only 2.7% explained
+# not significant, and only 2.4% explained
 
 permanova.both <- vegan::adonis2(indiv_matrix ~ Site * Host_ID, data = indiv_meta, method = "euclidean", permutations = 999)
 permanova.both
 
-# significant, and only 11.5% explained
+# significant, and only 10.8% explained
 
 
 permanova.both2 <- vegan::adonis2(indiv_matrix ~ Site + Host_ID, data = indiv_meta, method = "euclidean", permutations = 999)
 permanova.both2
 
-# significant, and only 4.9% explained
+# significant, and only 4.7% explained
 
 
 ########################################################################################
+
+
+## -- END -- ## 
