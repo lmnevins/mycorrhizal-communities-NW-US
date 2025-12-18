@@ -218,7 +218,7 @@ otu.rarecurve = rarecurve(otu.rare, step = 10000, label = F)
 ## Using robust clr transformation, which only transforms the non-zero values in the dataset, and is thus 
 # less affected by high zero counts than standard clr is 
 
-clr_EM <- decostand(asv, method = "rclr")
+clr_EM <- decostand(asv, method = "clr", pseudocount = 1e-06)
 
 clr_EM <- as.data.frame(clr_EM)
 
@@ -260,7 +260,8 @@ sites <- dplyr::select(sample_data, Sample_ID, Site, Host_ID, Field_ID, Location
 clr_sites_EM <- merge(sites, clr_EM, by = 'row.names')
 
 #PCA of differences in composition for Sites 
-pca_clr_EM = prcomp(clr_sites_EM[7:1633], center = T, scale = F)
+# Scaling because these CLR values are not scaled 
+pca_clr_EM = prcomp(clr_sites_EM[7:1633], center = T, scale = T)
 
 sd.pca_clr_EM = pca_clr_EM$sdev
 loadings.pca_clr_EM = pca_clr_EM$rotation
@@ -311,7 +312,7 @@ PCA_plot_both <- ggplot(scores.pca_clr_EM, aes(x = PC1, y = PC2, color = Host_ID
   theme(axis.text.x = element_text(size = 11),
         axis.text.y = element_text(size = 11))
 
-PCA_plot_both 
+PCA_plot_both
 
 
 # Plot the Results by site alone
@@ -384,9 +385,9 @@ permutest(betadisper.site, pairwise = TRUE)
 # Number of permutations: 999
 # 
 # Response: Distances
-# Df Sum Sq Mean Sq      F N.Perm Pr(>F)  
-# Groups      3   69.6 23.2118 2.4404    999  0.068 .
-# Residuals 367 3490.7  9.5114                      
+# Df Sum Sq Mean Sq      F N.Perm Pr(>F)   
+# Groups      3   3600 1199.95 5.2293    999  0.002 **
+#   Residuals 367  84214  229.46                     
 # ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
@@ -414,15 +415,19 @@ plot(mod.HSD)
 # Fit: aov(formula = distances ~ group, data = df)
 # 
 # $group
-#                        diff        lwr        upr     p adj
-# Northern-Andrews   0.87035851 -0.2638289 2.00454596 0.1972249
-# Southern-Andrews  -0.26121328 -1.4238624 0.90143588 0.9381006
-# WFDP-Andrews       0.01073127 -1.1662355 1.18769807 0.9999953
-# Southern-Northern -1.13157179 -2.2970258 0.03388217 0.0606610
-# WFDP-Northern     -0.85962723 -2.0393648 0.32011032 0.2381911
-# WFDP-Southern      0.27194456 -0.9351812 1.47907032 0.9376355
+#                      diff         lwr       upr     p adj
+# Northern-Andrews   4.630198  -0.9406522 10.201048 0.1409528
+# Southern-Andrews  -2.351687  -8.0623340  3.358960 0.7123834
+# WFDP-Andrews      -3.452371  -9.2333425  2.328601 0.4139034
+# Southern-Northern -6.981885 -12.7063083 -1.257461 0.0095943
+# WFDP-Northern     -8.082569 -13.8771496 -2.287988 0.0020446
+# WFDP-Southern     -1.100684  -7.0297890  4.828421 0.9636782
 
-# No sig diffs between sites 
+# sig diffs between sites 
+
+# southern - northern = 0.0096 *
+# WFDP - northern = 0.002 * 
+
 
 # Nicer boxplot 
 distances_EM <- data.frame(
@@ -460,10 +465,10 @@ permanova.site <- vegan::adonis2(aitchison_EM ~ Site, data = sample_data, method
 permanova.site
 
 # vegan::adonis2(formula = aitchison_EM ~ Site, data = sample_data, permutations = 999, method = "euclidean")
-#              Df SumOfSqs      R2      F Pr(>F)    
-# Model      3    333.1 0.01339 1.6599  0.001 ***
-#   Residual 367  24546.9 0.98661                  
-# Total    370  24879.9 1.00000                  
+# Df SumOfSqs      R2      F Pr(>F)
+# Model      3    32952 0.02542 3.1913  0.001 ***
+#   Residual 367  1263152 0.97458
+# Total    370  1296104 1.00000
 # ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
@@ -474,16 +479,14 @@ permanova.site
 permanova.both <- vegan::adonis2(aitchison_EM ~ Site * Host_ID, data = sample_data, method = "euclidean", permutations = 999)
 permanova.both
 
-# explained 9.6% 
+# explained 11.8% 
 
 
 permanova.both2 <- vegan::adonis2(aitchison_EM ~ Site + Host_ID, data = sample_data, method = "euclidean", permutations = 999)
 permanova.both2
 
-# explained 4%
+# explained 5.5%
 
-# When including the interaction of tree host and site, 9.6% of the variation was explained. Environmental and host identity explain only 
-# 9.6% of the variation. Only enviro explained 1%, ... just compare 
 
 ##################
 
@@ -501,9 +504,9 @@ permutest(betadisper.host)
 # Number of permutations: 999
 # 
 # Response: Distances
-#                Df  Sum Sq Mean Sq     F N.Perm Pr(>F)    
-#   Groups      6  367.76  61.293 7.274    999  0.001 ***
-#   Residuals 364 3067.19   8.426  
+# Df Sum Sq Mean Sq      F N.Perm Pr(>F)    
+# Groups      6   9753 1625.44 7.7822    999  0.001 ***
+#   Residuals 364  76027  208.87    
 # ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
@@ -523,37 +526,39 @@ plot(mod.HSD.host)
 # Fit: aov(formula = distances ~ group, data = df)
 # 
 #               diff        lwr         upr     p adj
-# ABGR-ABAM  0.2630496 -1.3436091  1.86970825 0.9990257
-# ABPR-ABAM -0.2231823 -1.9204269  1.47406231 0.9997240
-# ALRU-ABAM -1.7368891 -3.4451192 -0.02865899 0.0433859
-# PSME-ABAM  1.0349461 -0.5430413  2.61293345 0.4521910
-# TABR-ABAM  1.5113030 -0.1458829  3.16848904 0.1001746
-# TSHE-ABAM  1.3611215 -0.2168658  2.93910890 0.1424536
-# ABPR-ABGR -0.4862319 -2.2162238  1.24376001 0.9813392
-# ALRU-ABGR -1.9999387 -3.7407095 -0.25916793 0.0128427
-# PSME-ABGR  0.7718965 -0.8412609  2.38505390 0.7915276
-# TABR-ABGR  1.2482535 -0.4424559  2.93896281 0.3040096
-# TSHE-ABGR  1.0980720 -0.5150854  2.71122936 0.4048951
-# ALRU-ABPR -1.5137068 -3.3384178  0.31100413 0.1774172
-# PSME-ABPR  1.2581284 -0.4452694  2.96152616 0.3035267
-# TABR-ABPR  1.7344853 -0.0425305  3.51150118 0.0609028
-# TSHE-ABPR  1.5843038 -0.1190939  3.28770161 0.0874328
-# PSME-ALRU  2.7718352  1.0574913  4.48617906 0.0000488
-# TABR-ALRU  3.2481922  1.4606810  5.03570333 0.0000027
-# TSHE-ALRU  3.0980107  1.3836668  4.81235452 0.0000031
-# TABR-PSME  0.4763570 -1.1871304  2.13984430 0.9794653
-# TSHE-PSME  0.3261755 -1.2584282  1.91077914 0.9964747
-# TSHE-TABR -0.1501815 -1.8136689  1.51330584 0.9999695
+# ABGR-ABAM   2.1822157  -5.8168330 10.1812644 0.9839992
+# ABPR-ABAM  -2.9693112 -11.4193589  5.4807365 0.9438988
+# ALRU-ABAM  -9.1229818 -17.6277229 -0.6182407 0.0264743
+# PSME-ABAM   5.2258020  -2.6305013 13.0821053 0.4342503
+# TABR-ABAM   8.5380047   0.2873962 16.7886131 0.0371193
+# TSHE-ABAM   4.3586037  -3.4976996 12.2149070 0.6531682
+# ABPR-ABGR  -5.1515269 -13.7646131  3.4615592 0.5669858
+# ALRU-ABGR -11.3051975 -19.9719483 -2.6384468 0.0024753
+# PSME-ABGR   3.0435862  -4.9878177 11.0749901 0.9206193
+# TABR-ABGR   6.3557890  -2.0617217 14.7732997 0.2774927
+# TSHE-ABGR   2.1763880  -5.8550159 10.2077919 0.9845469
+# ALRU-ABPR  -6.1536706 -15.2383332  2.9309919 0.4111236
+# PSME-ABPR   8.1951132  -0.2855692 16.6757956 0.0658770
+# TABR-ABPR  11.5073159   2.6601123 20.3545195 0.0025824
+# TSHE-ABPR   7.3279149  -1.1527675 15.8085973 0.1409939
+# PSME-ALRU  14.3487838   5.8136043 22.8839633 0.0000198
+# TABR-ALRU  17.6609865   8.7615299 26.5604431 0.0000002
+# TSHE-ALRU  13.4815855   4.9464060 22.0167650 0.0000813
+# TABR-PSME   3.3122027  -4.9697782 11.5941836 0.8992725
+# TSHE-PSME  -0.8671983  -8.7564422  7.0220457 0.9999030
+# TSHE-TABR  -4.1794010 -12.4613819  4.1025799 0.7470465
 
 # significant differences are 
 
-# ALRU-ABAM = 0.043 *
-# ALRU-ABGR = 0.012 *
-# PSME-ALRU = 0.00005 ***
-# TABR-ALRU = 0.000003 ***
-# TSHE-ALRU = 0.000003 ***
+# ALRU-ABAM = 0.026 *
+# TABR-ABAM = 0.037 *
+# ALRU-ABGR = 0.002 *
+# TABR-ABPR = 0.002 * 
+# PSME-ALRU = 0.00002 ***
+# TABR-ALRU = 0.000002 ***
+# TSHE-ALRU = 0.000008 ***
 
-# ALRU is quite different from many of them 
+# ALRU is quite different from many of them, and TABR is different from a couple 
 
 
 # Nicer boxplot 
@@ -592,9 +597,9 @@ permanova.host
 
 # vegan::adonis2(formula = aitchison_EM ~ Host_ID, data = sample_data, permutations = 999, method = "euclidean")
 #            Df SumOfSqs      R2      F Pr(>F)    
-# Model      6    691.5 0.02779 1.7343  0.001 ***
-# Residual 364  24188.5 0.97221                  
-# Total    370  24879.9 1.00000 
+# Model      6    38664 0.02983 1.8654  0.001 ***
+# Residual 364  1257440 0.97017                  
+# Total    370  1296104 1.00000    
 
 
 # adonis result is significant but could be impacted by the heterogeneity in group variances observed 
@@ -605,8 +610,6 @@ permanova.host
 
 # INTERPRETATION 
 
-# There are significant differences in the beta dispersion of communities between host tree taxa, but not sites 
-# The distance to centroid values for the tree communities are related to some environmental variables, but 
-# simple linear relationships are an over-simplification here. 
+# There are significant differences in the beta dispersion of communities between host tree taxa and sites 
 
 ## -- END -- ## 
