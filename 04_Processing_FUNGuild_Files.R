@@ -26,6 +26,9 @@ library(vegan); packageVersion("vegan")
 # (1) DATA PREP
 ################ -- 
 
+wd <- "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/"
+setwd(wd)
+
 
 ## FunGuild was run through the command line for the AM and ITS data. The AM community 
 # was everything filtered as AM ASVs. The ITS data was everything that had been 
@@ -119,14 +122,6 @@ EM_funguild <- EM_funguild %>%
 
 # 290 remaining ASVs
 
-# save the dataframe 
-write.csv(EM_funguild, "./FUNGuild/EM_guilds_final_2025.csv", row.names = FALSE)
-
-
-# Filter columns to be able to merge with fungaltraits data down below 
-EM_funguild <- dplyr::select(EM_funguild, -c(Taxon, Taxon.Level, Trophic.Mode, Growth.Morphology, 
-                                             Notes, Trait, Citation.Source, Confidence.Ranking))
-
 
 # Split taxonomy column to get separate ranks 
 EM_funguild <- EM_funguild %>%
@@ -137,6 +132,22 @@ EM_funguild <- EM_funguild %>%
     fill = "right",   
     remove = FALSE    
   )
+
+
+# Fix name format for genus and species 
+
+EM_funguild$Genus <- sub("^g__", "", EM_funguild$Genus)
+
+EM_funguild$Species <- sub("^s__", "", EM_funguild$Species)
+
+
+# save the dataframe 
+write.csv(EM_funguild, "./FUNGuild/EM_guilds_final_2025.csv", row.names = FALSE)
+
+
+# Filter columns to be able to merge with fungaltraits data down below 
+EM_funguild <- dplyr::select(EM_funguild, -c(Taxon, Taxon.Level, Trophic.Mode, Growth.Morphology, 
+                                             Notes, Trait, Citation.Source, Confidence.Ranking))
 
 
 #################################################################################
