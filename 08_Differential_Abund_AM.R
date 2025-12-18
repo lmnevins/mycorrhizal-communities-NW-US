@@ -13,11 +13,6 @@
 #                     
 # -----------------------------------------------------------------------------#
 
-# Install from Bioconductor
-if (!requireNamespace("BiocManager", quietly = TRUE))
-  install.packages("BiocManager")
-BiocManager::install("ALDEx2")
-
 # PACKAGES, SCRIPTS, AND SETUP ####
 require(tidyverse); packageVersion("tidyverse")
 require(phyloseq); packageVersion("phyloseq")
@@ -44,23 +39,27 @@ sample_metadata <- read.csv("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyse
 # load in AM final phyloseq object 
 ps_AM <- readRDS("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_phyloseq_func_subset_final_2025.RDS")
 
-# 363 OTUS in 130 tree samples 
+# 363 ASVS in 130 tree samples 
 
-# Pull out OTU table of raw counts from phyloseq object 
-otus <- phyloseq::otu_table(ps_AM) %>% as.data.frame()
+# Pull out ASV table of raw counts from phyloseq object 
+asvs <- phyloseq::otu_table(ps_AM) %>% as.data.frame()
 
-otus <- t(otus) %>% as.data.frame()
+asvs <- t(asvs) %>% as.data.frame()
 
 
 ##### 
 
 # Get tax table for later 
-tax <- tax_table(ps_AM) %>% as.data.frame() %>% rownames_to_column(var = "OTU")
+tax <- tax_table(ps_AM) %>% as.data.frame() %>% rownames_to_column(var = "ASV")
 
 ## Can skip to section 'Environmental Extremes' if only interested in main results in paper 
 
 ######Differential Abundance Tests###########################################################################
 ##Differential abundance using ALDEx2
+
+# Aldex2 performs CLR transformation internally, and this was done each time with a pseudocount of 1, while 
+# a pseudocount of 1e-06 was done for the other compositional analyses. This was necessary because aldex.clr 
+# applies the clr transformation to each read separately, so it accounts for the pseudocount in a different way. 
 
 # Following some of this vignette: 
 # https://www.bioconductor.org/packages/devel/bioc/vignettes/ALDEx2/inst/doc/ALDEx2_vignette.html
@@ -70,10 +69,10 @@ tax <- tax_table(ps_AM) %>% as.data.frame() %>% rownames_to_column(var = "OTU")
 # to do pairwise comparisons for each pair of sites 
 
 
-# STEP 1: Ensure OTU matrix is numeric and cleaned
-otus[] <- lapply(otus, as.numeric)  # convert to numeric
-otu_matrix <- as.matrix(otus)
-otu_matrix <- otu_matrix[rowSums(otu_matrix) > 0, ]  # remove all-zero OTUs
+# STEP 1: Ensure ASV matrix is numeric and cleaned
+asvs[] <- lapply(asvs, as.numeric)  # convert to numeric
+asv_matrix <- as.matrix(asvs)
+asv_matrix <- asv_matrix[rowSums(asv_matrix) > 0, ]  # remove all-zero ASVs
 
 # STEP 2: Create named grouping vector
 grouping_vector <- sample_metadata$Site
@@ -92,11 +91,11 @@ for (pair in site_pairs) {
   tree_ids <- names(grouping_vector[grouping_vector %in% pair])
   pair_sites <- grouping_vector[tree_ids]
   
-  # Subset OTU matrix to trees from these sites
-  sub_otu <- otu_matrix[, tree_ids, drop = FALSE]
+  # Subset ASV matrix to trees from these sites
+  sub_asv <- asv_matrix[, tree_ids, drop = FALSE]
   
-  # Filter again in case some OTUs are now zero-sum
-  sub_otu <- sub_otu[rowSums(sub_otu) > 0, , drop = FALSE]
+  # Filter again in case some ASVs are now zero-sum
+  sub_asv <- sub_asv[rowSums(sub_asv) > 0, , drop = FALSE]
   
   # Skip if too few samples
   if (length(unique(pair_sites)) < 2 || any(table(pair_sites) < 2)) {
@@ -105,12 +104,12 @@ for (pair in site_pairs) {
   }
   
   # Run ALDEx2
-  x.clr <- aldex.clr(sub_otu + 1, conds = pair_sites, mc.samples = 128, denom = "all")
+  x.clr <- aldex.clr(sub_asv + 1, conds = pair_sites, mc.samples = 128, denom = "all")
   x.tt <- aldex.ttest(x.clr)
   x.effect <- aldex.effect(x.clr, CI=T)
   
   results <- cbind(x.tt, x.effect)
-  results$OTU <- rownames(results)
+  results$ASV <- rownames(results)
   results$Comparison <- paste(pair[1], "vs", pair[2])
   
   pairwise_results[[paste(pair[1], pair[2], sep = "_vs_")]] <- results
@@ -121,7 +120,7 @@ all_results_df <- bind_rows(pairwise_results, .id = "Comparison_ID")
 
 # Merge taxonomic information with the differential abundance results 
 aldex_taxa <- all_results_df %>%
-  left_join(tax, by = "OTU")
+  left_join(tax, by = "ASV")
 
 
 
@@ -156,20 +155,20 @@ sig_plot
 
 # Assess significant genera
 
-# Summarize number of significant OTUs per genus per comparison
+# Summarize number of significant ASVs per genus per comparison
 sig_genera <- aldex_taxa %>%
   filter(we.eBH < 0.05, abs(effect) > 0.6) %>%
   group_by(Comparison, Genus) %>%
-  summarise(Signif_OTUs = n(), .groups = "drop") %>%
-  arrange(desc(Signif_OTUs))
+  summarise(Signif_ASVs = n(), .groups = "drop") %>%
+  arrange(desc(Signif_ASVs))
 
 sig_families <- aldex_taxa %>%
   filter(we.eBH < 0.05, abs(effect) > 0.6) %>%
   group_by(Comparison, Family) %>%
-  summarise(Signif_OTUs = n(), .groups = "drop") %>%
-  arrange(desc(Signif_OTUs))
+  summarise(Signif_ASVs = n(), .groups = "drop") %>%
+  arrange(desc(Signif_ASVs))
 
-# OTU's are all in the Glomeraceae
+# ASVs are all in the Glomeraceae
 
 
 ## INTERPRETATION: For these exploratory analyses I was just lumping together all host trees as 
@@ -183,7 +182,7 @@ sig_families <- aldex_taxa %>%
 ### 1. Comparing host species within each site -> will compare the impact of host 
       # identity while keeping the local environment consistent 
 
-# otus is the input dataframe where each tree is a column
+# asvs is the input dataframe where each tree is a column
 
 # sample_metadata identifies each tree to match in the 'X' column 
 
@@ -223,21 +222,21 @@ for (s in sites) {
     
     samples <- pair_meta$X
     
-    # Subset OTU table
-    pair_otu <- otus[, samples]
+    # Subset ASV table
+    pair_asv <- asvs[, samples]
     
     # Grouping vector
     group_vector <- pair_meta$Host_ID
     names(group_vector) <- pair_meta$X
     
     # Run ALDEx2
-    aldex_result <- aldex.clr(pair_otu, conds = group_vector, mc.samples = 128, denom = "all", verbose = FALSE)
+    aldex_result <- aldex.clr(pair_asv +1, conds = group_vector, mc.samples = 128, denom = "all", verbose = FALSE)
     aldex_out <- aldex.ttest(aldex_result, paired.test = FALSE)
     aldex_effect <- aldex.effect(aldex_result, CI = T)
     
     # Combine results
     combined <- cbind(aldex_out, aldex_effect)
-    combined$OTU <- rownames(combined)
+    combined$ASV <- rownames(combined)
     combined$Comparison <- paste0(host1, "_vs_", host2)
     combined$Site <- s
     
@@ -252,7 +251,7 @@ all_results_host_site <- bind_rows(all_results)
 
 # Merge taxonomic information with the differential abundance results 
 all_results_host_site <- all_results_host_site %>%
-  left_join(tax, by = "OTU")
+  left_join(tax, by = "ASV")
 
 
 # Flag significance 
@@ -278,18 +277,18 @@ host_site_plot
 ## No significant results 
 
 
-# Summarize number of significant OTUs per genus per comparison
+# Summarize number of significant ASVs per genus per comparison
 sig_genera2 <- all_results_host_site %>%
   filter(we.eBH < 0.05, abs(effect) > 0.6) %>%
   group_by(Comparison, Genus) %>%
-  summarise(Signif_OTUs = n(), .groups = "drop") %>%
-  arrange(desc(Signif_OTUs))
+  summarise(Signif_ASVs = n(), .groups = "drop") %>%
+  arrange(desc(Signif_ASVs))
 
 sig_families2 <- all_results_host_site %>%
   filter(we.eBH < 0.05, abs(effect) > 0.6) %>%
   group_by(Comparison, Family) %>%
-  summarise(Signif_OTUs = n(), .groups = "drop") %>%
-  arrange(desc(Signif_OTUs))
+  summarise(Signif_ASVs = n(), .groups = "drop") %>%
+  arrange(desc(Signif_ASVs))
 
 # No significant taxa 
 
@@ -298,7 +297,7 @@ sig_families2 <- all_results_host_site %>%
 ### 2. Comparing host species across each site -> will compare how the fungal community of each 
       # host tree changes across the environmental gradients 
 
-# otus is the input dataframe where each tree is a column
+# asvs is the input dataframe where each tree is a column
 
 # sample_metadata identifies each tree to match in the 'X' column 
 
@@ -310,9 +309,9 @@ site_pairs_per_host <- list()
 for (host in host_list) {
   cat("\n----\nRunning ALDEx2 for", pair[1], "vs", pair[2], "\n")
   
-  # Subset metadata and OTU table to only this host species
+  # Subset metadata and ASV table to only this host species
   meta_sub <- sample_metadata %>% filter(Host_ID == host)
-  otu_sub <- otus[, meta_sub$X]
+  asv_sub <- asvs[, meta_sub$X]
   
   # Get all pairwise site comparisons for this host
   site_pairs <- combn(unique(meta_sub$Site), 2, simplify = FALSE)
@@ -323,18 +322,18 @@ for (host in host_list) {
     
     # Subset samples for this site pair
     samples_pair <- meta_sub %>% filter(Site %in% c(site1, site2))
-    otu_pair <- otu_sub[, samples_pair$X]
+    asv_pair <- asv_sub[, samples_pair$X]
     
     # Grouping vector (site labels)
     group_vector <- samples_pair$Site
     
     # Run ALDEx2
-    aldex_result <- aldex.clr(otu_pair, group_vector, mc.samples = 128, denom = "all", verbose = FALSE)
+    aldex_result <- aldex.clr(asv_pair +1, group_vector, mc.samples = 128, denom = "all", verbose = FALSE)
     aldex_test <- aldex.ttest(aldex_result)
     aldex_effect <- aldex.effect(aldex_result, CI = T)
     
     # Combine results
-    result_df <- cbind(OTU = rownames(aldex_test), aldex_test, aldex_effect) %>%
+    result_df <- cbind(ASV = rownames(aldex_test), aldex_test, aldex_effect) %>%
       mutate(Site_Comparison = paste(site1, "vs", site2, sep = "_"),
              Host_ID = host)
     
@@ -348,7 +347,7 @@ all_results_hosts_across <- bind_rows(site_pairs_per_host)
 
 # Merge taxonomic information with the differential abundance results 
 all_results_hosts_across <- all_results_hosts_across %>%
-  left_join(tax, by = "OTU")
+  left_join(tax, by = "ASV")
 
 
 all_results_hosts_across <- all_results_hosts_across %>%
@@ -382,18 +381,18 @@ hosts_across_plot
 # site, negative means it's more abundant in the second site. 
 
 
-# Summarize number of significant OTUs per genus per comparison
+# Summarize number of significant ASVs per genus per comparison
 sig_genera3 <- all_results_hosts_across %>%
   filter(we.eBH < 0.05, abs(effect) > 0.6) %>%
   group_by(Site_Comparison, Host_ID, Genus) %>%
-  summarise(Signif_OTUs = n(), .groups = "drop") %>%
-  arrange(desc(Signif_OTUs))
+  summarise(Signif_ASVs = n(), .groups = "drop") %>%
+  arrange(desc(Signif_ASVs))
 
 sig_families3 <- all_results_hosts_across %>%
   filter(we.eBH < 0.05, abs(effect) > 0.6) %>%
   group_by(Site_Comparison, Host_ID, Family) %>%
-  summarise(Signif_OTUs = n(), .groups = "drop") %>%
-  arrange(desc(Signif_OTUs))
+  summarise(Signif_ASVs = n(), .groups = "drop") %>%
+  arrange(desc(Signif_ASVs))
 
 # All in the Glomeraceae
 
@@ -411,20 +410,19 @@ sig_families3 <- all_results_hosts_across %>%
 
 # Explore the sample_metadata to look at variation in some environmental variables 
 
-# Elevation 
-hist(sample_metadata$elev)
+
+## From the forward selection for the dbRDA, the variables selected as significant for the AM taxa were:
+# ph + elev + Sand + apr1_SWE
+
 
 # Soil pH
 hist(sample_metadata$ph)
 
-# Soil C
-hist(sample_metadata$pct_C)
+# Elevation 
+hist(sample_metadata$elev)
 
 # Soil Sand
 hist(sample_metadata$Sand)
-
-# Soil Cation Exchange Capacity 
-hist(sample_metadata$EC)
 
 # April 1 SWE
 hist(sample_metadata$apr1_SWE)
@@ -464,10 +462,11 @@ sample_metadata$sample_code <- sample_metadata$X
 # Loop to find the extremes for each species across enviro variables of interest 
 
 # Define environmental variables to analyze
-# Looking at main variables related to drought and soil properties (27 total)
+# Looking at main variables related to drought and soil properties that I have a priori
+# expectations for being important 
+
 env_vars <- c("elev", "mean_precip_mm", "mean_summer_precip_mm", "MAT", "pct_C", "pct_N", "ph", "org_matter", "Sand", "Silt",
-              "Clay", "K", "SO4", "B", "EC", "Zn", "Mn", "Cu", "Fe", "Ca", "Mg", "Na", 
-              "tot_bases", "avg_July_SPEI", "count_mod_dry", "count_sev_dry", "apr1_SWE")
+              "Clay", "EC", "tot_bases", "avg_July_SPEI", "count_mod_dry", "count_sev_dry", "apr1_SWE")
 
 # Make an empty list to store results
 extreme_tree_groups_list <- list()
@@ -503,9 +502,9 @@ extreme_tree_groups <- bind_rows(extreme_tree_groups_list)
 ###########
 # ALDEx2
 
-# otus is the dataframe of raw sequence reads, with OTUs as rows and tree samples as columns 
-# tax is the taxonomic information for each OTU
-# column 'sample_code' in the sample_metadata df matches the columns in otus 
+# asvs is the dataframe of raw sequence reads, with ASVs as rows and tree samples as columns 
+# tax is the taxonomic information for each ASV
+# column 'sample_code' in the sample_metadata df matches the columns in asvs 
 
 # Initialize results list
 aldex_results_list <- list()
@@ -533,9 +532,9 @@ for (i in 1:nrow(comparisons)) {
   
   # Extract count data for those samples
   sample_ids <- subset_samples$sample_code
-  subset_counts <- otus[, colnames(otus) %in% sample_ids]
+  subset_counts <- asvs[, colnames(asvs) %in% sample_ids]
   
-  # Make sure OTUs are rows and Samples are columns
+  # Make sure ASVs are rows and Samples are columns
   if (!is.matrix(subset_counts)) {
     subset_counts <- as.matrix(subset_counts)
   }
@@ -553,13 +552,13 @@ for (i in 1:nrow(comparisons)) {
   
   # Run ALDEx2
   tryCatch({
-    aldex.clr.out <- aldex.clr(subset_counts, group_vector, mc.samples = 128, denom = "all", verbose = FALSE)
+    aldex.clr.out <- aldex.clr(subset_counts +1, group_vector, mc.samples = 128, denom = "all", verbose = FALSE)
     aldex.test.out <- aldex.ttest(aldex.clr.out, paired.test = FALSE)
     aldex.effect.out <- aldex.effect(aldex.clr.out, CI=T)
     
     # Combine results
     combined <- cbind(aldex.test.out, aldex.effect.out)
-    combined$OTU <- rownames(combined)
+    combined$ASV <- rownames(combined)
     
     # Annotate
     combined <- combined %>%
@@ -581,7 +580,7 @@ aldex_all_extremes <- bind_rows(aldex_results_list)
 
 # Merge taxonomic information with the differential abundance results 
 aldex_all_extremes <- aldex_all_extremes %>%
-  left_join(tax, by = "OTU")
+  left_join(tax, by = "ASV")
 
 
 aldex_all_extremes <- aldex_all_extremes %>%
@@ -657,7 +656,7 @@ extremes_sig_results <- filter(aldex_trimmed_for_plot, Significant == "Significa
 
 
 # Select just the results columns of interest 
-extremes_sig_results <- dplyr::select(extremes_sig_results, we.eBH, effect, OTU, Host_ID, Environmental_Var,
+extremes_sig_results <- dplyr::select(extremes_sig_results, we.eBH, effect, ASV, Host_ID, Environmental_Var,
                                       Comparison, Family, Genus)
 
 # Save file 
@@ -671,61 +670,43 @@ extremes_sig_results$Environmental_Var <- as.factor(extremes_sig_results$Environ
 
 # Recode levels
 extremes_sig_results <- extremes_sig_results %>%
-  mutate(Environmental_Var = recode(Environmental_Var,
+  mutate(Environmental_Var = dplyr::recode(Environmental_Var,
                                     mean_precip_mm = "MAP",
                                     mean_summer_precip_mm = "MSP",
                                     avg_July_SPEI = "SPEI",
                                     count_mod_dry = "Mod_Dry",
-                                    count_sev_dry = "Sev_Dry", 
-                                    elev = "Elev", 
-                                    tot_bases = "Tot_Bases",
-                                    ph = "pH"))
+                                    count_sev_dry = "Sev_Dry"))
 
 # Put in alphabetical order for clean plotting 
 extremes_sig_results$Environmental_Var <- factor(extremes_sig_results$Environmental_Var, 
-                                                 levels=c("Zn", "Tot_Bases", "SPEI", "SO4", "Silt", "Sev_Dry", "Sand", "pH", "Na", 
-                                                          "MSP", "Mod_Dry", "Mg",  "MAT", "MAP", "K", "Fe", "Elev", "EC", "Cu", "Ca", "B"))
+                                                 levels=c("SPEI", "Silt", "Sev_Dry", "Sand", 
+                                                          "MSP", "Mod_Dry", "MAP", "EC"))
 
 levels(extremes_sig_results$Environmental_Var)
 
 
-
-# This won't be visible in the dataframe but
-
-
-# Add column for if the environmental variable is related to drought or soil 
-
-extremes_sig_results$Var_Type <- c("Spatial", "Spatial", "Drought", "Drought", "Drought",
-                                   "Drought", "Drought", "Drought", "Drought", "Drought",
-                                   "Drought", "Drought", "Drought", "Soil", "Soil", "Soil",
-                                   "Soil", "Soil", "Soil", "Soil", "Soil", "Soil", "Soil",
-                                   "Soil", "Soil", "Soil", "Soil", "Soil", "Soil", "Soil",
-                                   "Soil", "Soil", "Soil", "Soil", "Soil", "Soil", "Soil",
-                                   "Soil", "Soil", "Soil", "Soil", "Soil", "Soil", "Soil", 
-                                   "Soil", "Soil", "Soil", "Soil", "Soil", "Soil", "Soil",
-                                   "Soil", "Soil", "Soil", "Soil", "Soil", "Soil", "Soil",
-                                   "Soil", "Drought", "Drought", "Drought", "Drought", 
-                                   "Drought", "Drought", "Drought", "Drought", "Drought", "Drought")
-
-
-
-# Try out an OTU label 
+# Try out an ASV label 
 extremes_sig_results <- extremes_sig_results %>%
   mutate(
     Genus = ifelse(is.na(Genus) | Genus == "", "Unclassified", Genus),
-    OTU_label = paste0(OTU, " (", Family, ", ", Genus, ")")
+    ASV_label = paste0(ASV, " (", Family, ", ", Genus, ")")
   )
 
 # This is quite long, so while it may be useful at some point, it's clunky here
 
 
-# Set OTU's to group by a bit of phylogenetic structure 
+# Set ASVs to group by a bit of phylogenetic structure 
 extremes_sig_results <- extremes_sig_results %>%
-  mutate(OTU = factor(OTU, 
+  mutate(ASV = factor(ASV, 
                       levels = extremes_sig_results %>%
-                        arrange(Genus, Family, OTU) %>% # Will go by genus first, then family
-                        pull(OTU) %>%
+                        arrange(Genus, Family, ASV) %>% # Will go by genus first, then family
+                        pull(ASV) %>%
                         unique()))
+
+
+# Find the effect size range to set for plotting 
+max_abs_effect <- max(abs(extremes_sig_results$effect), na.rm = TRUE)
+
 
 
 ###############
@@ -733,7 +714,7 @@ extremes_sig_results <- extremes_sig_results %>%
 # Heat map of effect sizes of changes in abundance 
 
 heat_AM <- ggplot(extremes_sig_results, aes(y = Environmental_Var, 
-                   x = OTU, 
+                   x = ASV, 
                    fill = effect)) +
   geom_tile(color = "grey70") +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
@@ -745,7 +726,7 @@ heat_AM <- ggplot(extremes_sig_results, aes(y = Environmental_Var,
     axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),  
     axis.text.y = element_text(angle = 90, hjust = 1, size = 8),    
     strip.text = element_text(size = 12, face = "bold")) + 
-  labs(y = "Environmental gradient", x = "OTU")
+  labs(y = "Environmental gradient", x = "ASV")
 
 heat_AM
 
@@ -755,19 +736,58 @@ heat_AM
 
 ## Bubble plot 
 bubble_AM <- ggplot(extremes_sig_results, aes(y = Environmental_Var, 
-                                              x = OTU, size = abs(effect), color = effect)) +
+                                              x = ASV, size = abs(effect), color = effect)) +
   geom_point(aes(size = abs(effect), color = effect)) +
-  scale_color_gradient2(low = "blue", mid = "grey90", high = "red", 
-                        midpoint = 0, 
-                        name = "Effect size") +
-  scale_size_continuous(name = "|Effect size|") +
-  facet_wrap(~ Host_ID, scales = "free_y") +
-  theme_bw(base_size = 12) +
+  scale_color_gradient2(low = "blue", mid = "grey90", high = "red", midpoint = 0,
+    limits = c(-3.5, 3.5), name = "Effect size") +
+  scale_size_continuous(name = "|Effect size|", limits = c(0, 3.5)) +
+  facet_wrap(~ Host_ID, scales = "free_y", nrow = 2) +
+  theme_minimal(base_size = 12) +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, color = "black"),
         axis.text.y = element_text(color = "black"),
         panel.grid = element_blank()) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
-  labs(y = "Environmental Gradient")
+  labs(y = "Environmental Factor", x = "")
 
 bubble_AM
+
+
+
+## Fine-tuning 
+
+
+# Subset results to only those environmental variables that were forward selected 
+
+extremes_sig_subset <- filter(extremes_sig_results, Environmental_Var %in% c("pH", "Elev", "Sand"))
+
+
+# Put in alphabetical order for clean plotting 
+extremes_sig_subset$Environmental_Var <- factor(extremes_sig_subset$Environmental_Var, 
+                                                 levels=c("Sand", "pH", "Elev"))
+
+levels(extremes_sig_subset$Environmental_Var)
+
+
+bubble_AM_subset <- ggplot(extremes_sig_subset, aes(y = Environmental_Var, 
+                                              x = ASV, size = abs(effect), color = effect)) +
+  geom_point(aes(size = abs(effect), color = effect)) +
+  scale_color_gradient2(low = "blue", mid = "grey90", high = "red", midpoint = 0,
+                        limits = c(-3.5, 3.5), name = "Effect size") +
+  scale_size_continuous(name = "|Effect size|", limits = c(0, 3.5)) +
+  facet_wrap(~ Host_ID, scales = "free_y", nrow = 2) +
+  theme_minimal(base_size = 12) +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, color = "black"),
+        axis.text.y = element_text(color = "black"),
+        panel.grid = element_blank()) +
+  theme(legend.title = element_text(colour="black", size=12, face="bold")) +
+  labs(y = "Environmental Factor", x = "")
+
+bubble_AM_subset
+
+# this doesn't feel valuable to do because it removes almost all of the results 
+
+
+## -- END -- ## 
 
