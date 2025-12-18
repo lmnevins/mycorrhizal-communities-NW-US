@@ -38,22 +38,20 @@ ps_AM_clr <- readRDS("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL
 spp <- otu_table(ps_AM_clr) %>% as("matrix") %>% as.data.frame()
 
 # Load in the aitchison distance matrix for the AM data 
-load("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/aitchison_dist_AM_traits.Rdata")
+load("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/aitchison_dist_AM_2025.Rdata")
 
-mat <- as.matrix(aitchison_AM_traits)
+mat <- as.matrix(aitchison_AM)
 
-# 105 trees as many were excluded as not having functional variation different from the mean of the 
-# community 
-
+# all 130 trees 
 
 # Load in the sample data file containing the subset of environmental data 
-env <- read.csv(file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_enviro_trait_aitchison_subset.csv", row.names = 1)
+env <- read.csv(file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_enviro_all_2025.csv", row.names = 1)
 
 # Trim down to just the columns with the environmental data in them 
 env <- env[ -c(1:5) ]
 
 #load original again for plotting later 
-env2 <- read.csv(file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_enviro_trait_aitchison_subset.csv", row.names = 1)
+env2 <- read.csv(file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_enviro_all_2025.csv", row.names = 1)
 
 #############################################################################
 
@@ -81,9 +79,12 @@ print(high_cor_df)
 
 # Select a subset of environmental data that doesn't contain highly correlated variables 
 
+
+# pct_N, ph, Sand, elev, EC, avg_July_SPEI, MAT, mean_summer_precip_mm, apr1_SWE
+
 env <- rownames_to_column(env, "Tree")
 
-env_sub <- dplyr::select(env, Tree, elev, mean_precip_mm, MAT, pct_N, ph, Sand, count_mod_dry, apr1_SWE)
+env_sub <- dplyr::select(env, Tree, pct_N, ph, Sand, elev, EC, avg_July_SPEI, MAT, mean_summer_precip_mm, apr1_SWE)
 
 env_sub <- column_to_rownames(env_sub, "Tree")
 
@@ -105,7 +106,7 @@ env_scaled <- as.data.frame(scale(env_sub))
 # homogenous or heterogenous the data are 
 # This tells us if we can use a constrained method like RDA
 
-decorana (aitchison_AM_traits) #length of DCA1 is 1.4383
+decorana (aitchison_AM) #length of DCA1 is 0.434
 
 
 # Doing forward selection
@@ -116,10 +117,12 @@ decorana (aitchison_AM_traits) #length of DCA1 is 1.4383
 #(forward, backward, both, with the default to both):
 
 # Null model for stepwise selection
-null_model <- vegan::capscale(aitchison_AM_traits ~ 1, data = env_scaled)
+null_model <- vegan::capscale(aitchison_AM ~ 1, data = env_scaled)
 
 # Full model
-full_model <- vegan::capscale(aitchison_AM_traits ~ ., data = env_scaled)
+full_model <- vegan::capscale(aitchison_AM ~ ., data = env_scaled)
+
+# a few variables are still colinear, but I'm going to leave them in because I think they are important 
 
 # Forward selection
 step_result <- ordistep(null_model, scope = formula(full_model), direction = "forward", permutations = 9999)
@@ -132,7 +135,7 @@ step_result
 step_result$anova
 
 
-# apr1_SWE, pct_N, count_mod_dry and elev significant 
+# ph + elev + Sand + apr1_SWE significant 
 
 # take env_scaled and merge host_ID to be able to model both 
 hosts <- dplyr::select(env2, Host_ID)
@@ -144,8 +147,8 @@ mod_data <- merge(hosts, env_scaled, by = "row.names")
 #performing the dbRDA
 
 #using just the 2 variables selected with forward selection 
-AM_RDA <- capscale(formula = aitchison_AM_traits ~ Host_ID + apr1_SWE + pct_N + count_mod_dry + elev
-                   , mod_data, distance = "euclidean", sqrt.dist = FALSE,
+AM_RDA <- capscale(formula = aitchison_AM ~ Host_ID + ph + elev + Sand + apr1_SWE,
+                   mod_data, distance = "euclidean", sqrt.dist = FALSE,
                    comm = NULL, add = FALSE, metaMDSdist = FALSE)
 
 
@@ -163,7 +166,7 @@ adjusted_p <- p.adjust(raw_p, method = "bonferroni")
 anova_results$Adjusted_P <- adjusted_p
 print(anova_results)
 
-# Only pct_N and count_mod_dry still significant 
+# All still significant, plus host! 
 
 summary(AM_RDA)
 
@@ -171,22 +174,22 @@ screeplot(AM_RDA)
 
 AM_RDA
 
-# Partitioning of squared Euclidean distance:
-#                 Inertia Proportion
-# Total          132.24     1.0000
-# Constrained     60.58     0.4581
+#                  Inertia Proportion Rank
+# Total         5065.6776     1.0000     
+# Constrained    840.0773     0.1658    6
+# Unconstrained 4225.6003     0.8342  123
 
-# 45.8% of the variance is explained by the environmental variables 
+# 16.6% of the variance is explained by the environmental variables 
 # Inertia = total variation in the data 
 
 
 # Importance of components:
-#                          CAP1    CAP2      CAP3    
-# Eigenvalue            59.0601 1.39298 0.1303568 
-# Proportion Explained   0.4466 0.01053 0.0009857  
-# Cumulative Proportion  0.4466 0.45713 0.4581187  
+#                          CAP1     CAP2    
+# Eigenvalue            321.1714 241.4201 
+# Proportion Explained    0.3823   0.2874   
+# Cumulative Proportion   0.3823   0.6697 
 
-#First axis explained 45% of the variation explained by the overall model (45%)
+#First axis explained 38% of the variation explained by the overall model (16.6%)
 #So the first axis is really carrying the team. 
 
 
@@ -253,8 +256,8 @@ q <- ggplot() +
                       breaks=c("ALRU", "TABR", "THPL"),
                       labels=c("ALRU", "TABR", "THPL")) +
   theme_bw() +
-  labs(x = "CAP1 (44.66%)",
-       y = "CAP2 (10.53%)",
+  labs(x = "CAP1 (38.23%)",
+       y = "CAP2 (28.74%)",
        color = "Site") +
   coord_cartesian()  +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
@@ -270,8 +273,6 @@ q
 
 # INTERPRETATION
 
-# This is explaining 45% of the variation and the environmental variables that are significant are 
-# different from the taxonomic results. BUT, the shape of the ordination is nearly vertical, 
-# which suggests that there are some issues with the data. 
+# This is explaining 16.6% of the variation
 
 
