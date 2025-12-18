@@ -85,40 +85,40 @@ summary(exp)
 matrix <- merge(tax, exp, by = "Family", all.y = TRUE)
 
 #get column name set for name merging down below
-matrix$OTU <- matrix$X
+matrix$ASV <- matrix$X
 
-# the number is correct - 363 OTUs with genus and functional assignments 
+# the number is correct - 363 ASVs with genus and functional assignments 
 
-#start names file with the original OTUs 
-OTU <- phyloseq::taxa_names(ps_AM)
-OTU_long <- as.data.frame(OTU)
+#start names file with the original ASVs 
+ASV <- phyloseq::taxa_names(ps_AM)
+ASV_long <- as.data.frame(ASV)
 
 #change OTU names to something nicer to work with
 taxa_names(ps_AM)
 n_seqs <- seq(ntaxa(ps_AM))
 len_n_seqs <- nchar(max(n_seqs))
-taxa_names(ps_AM) <- paste("OTU", formatC(n_seqs, 
+taxa_names(ps_AM) <- paste("ASV", formatC(n_seqs, 
                                               width = len_n_seqs, 
                                               flag = "0"), sep = "_")
 taxa_names(ps_AM)
 
 # get shortened names 
-OTU2 <- taxa_names(ps_AM) 
-OTU_short <- as.data.frame(OTU2)
+ASV2 <- taxa_names(ps_AM) 
+ASV_short <- as.data.frame(ASV2)
 
 # join two dataframes
-all_names <- cbind(OTU_long, OTU_short)
+all_names <- cbind(ASV_long, ASV_short)
 
 
 # save all_names file as key to the long and short OTU assignments 
-write.csv(all_names, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/all_OTU_names_AM.csv")
+write.csv(all_names, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/all_ASV_names_AM.csv")
 
 
-#merge taxa_names with the traits file to get the updated OTU names 
-matrix <- merge(matrix, all_names, by = "OTU")
+#merge taxa_names with the traits file to get the updated ASV names 
+matrix <- merge(matrix, all_names, by = "ASV")
 
 # Prune the final phyloseq object to just contain the taxa that have functional assignments 
-taxa_to_keep <- matrix$OTU2
+taxa_to_keep <- matrix$ASV2
 
 # Prune taxa from the phyloseq object that are NOT in the taxa_to_keep list 
 ps_AM_trimmed_funcs <- prune_taxa(taxa_to_keep, ps_AM)
@@ -155,8 +155,7 @@ seq_counts <- otu_table(ps_AM_final) %>% rowSums() %>% as.data.frame()
 
 
 ####### -- 
-# Note: There are 16 trees with <10 ASV's -> for due diligence should run the analyses without 
-# them and see if it makes a difference. For now will retain. 
+# Note: There are 16 trees with <10 ASV's
 ###### -- 
 
 
@@ -202,8 +201,8 @@ saveRDS(ps_AM_final, file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyse
 
 
 ############# -- 
-# Save 'matrix' which now has functional info matched up to OTU's and taxa
-write.csv(matrix, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/matched_OTU_funcs_AM.csv")
+# Save 'matrix' which now has functional info matched up to asvs and taxa
+write.csv(matrix, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/matched_ASV_funcs_AM.csv")
 
 ############# -- 
 
@@ -237,10 +236,9 @@ otu.rarecurve = rarecurve(otu.rare, step = 10000, label = F)
 # London, UK: Springer.
 
 
-## Using robust clr transformation, which only transforms the non-zero values in the dataset, and is thus 
-# less affected by high zero counts than standard clr is 
+## Using clr transformation with a small pseudocount to account for many zeros in the data 
 
-clr_AM <- decostand(asv, method = "rclr")
+clr_AM <- decostand(asv, method = "clr",  pseudocount = 1e-06)
 
 clr_AM <- as.data.frame(clr_AM)
 
@@ -265,7 +263,7 @@ saveRDS(ps_AM_clr, file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/
 # (2) ANALYSES OF COMMUNITY COMPOSITION
 ######################################## --
 
-## GOAL: Analyze the taxonomic composition of the AMF communities.  
+## GOAL: Analyze the taxonomic composition of the AM communities.  
 
 
 # Load in ps_AM_clr dataframe 
@@ -298,7 +296,7 @@ sites <- dplyr::select(sample_metadata, Sample_ID, Site, Host_ID, Field_ID, Loca
 clr_sites_AM <- merge(sites, clr_AM, by = 'row.names')
 
 #PCA of differences in composition for Sites 
-pca_clr_AM = prcomp(clr_sites_AM[7:369], center = T, scale = F)
+pca_clr_AM = prcomp(clr_sites_AM[7:369], center = T, scale = T)
 
 sd.pca_clr_AM = pca_clr_AM$sdev
 loadings.pca_clr_AM = pca_clr_AM$rotation
@@ -383,7 +381,7 @@ PCA_plot_site
 ## Try out a way to visualize differences in the communities along these two axes: 
 
 
-### Calculate average PC1 score for each site, compare statistically 
+### Calculate average PC1 score for each site, compare statistically  ####
 
 PC1_site <- dplyr::select(scores.pca_clr_AM, PC1, Site, Host_ID)
 
@@ -487,6 +485,8 @@ PC2_site_plot
 ## Need to add significance values to this but they are a bit complicated, 
 # so can come back and do this 
 
+######################### 
+
 #### -- 
 
 # Plot the Results by host alone
@@ -514,7 +514,7 @@ PCA_plot_host
 
 
 
-### Calculate average PC1 score for each host, compare statistically 
+### Calculate average PC1 score for each host, compare statistically   ######
 
 PC1_host <- dplyr::select(scores.pca_clr_AM, PC1, Site, Host_ID)
 
@@ -623,7 +623,7 @@ betadisper.site
 
 # This is permutational, so it will give a different p-value each time 
 permutest(betadisper.site)
-#groups dispersions are different (not homogenous) p = 0.004
+#groups dispersions are different (not homogenous) p = 0.003
 
 #if the dispersion is different between groups, then examine
 scores(betadisper.site, display = c("sites", "centroids"),
@@ -647,15 +647,17 @@ plot(mod.HSD)
 # Fit: aov(formula = distances ~ group, data = df)
 # 
 # $group
-#                             diff                    lwr                     upr                    p adj
-# Northern-Andrews   0.18681506357030031040 -2.3560911185586763672  2.72972124569927698801 0.9975066796109566258366
-# Southern-Andrews   0.48539949048187480685 -2.2652216870396046922  3.23602066800335430585 0.9676583240917973061102
-# WFDP-Andrews      -3.30092044917789273484 -5.9901817627034859015 -0.61165913565229956816 0.0094283591509782826989
-# Southern-Northern  0.29858442691157449644 -2.5731028094355701263  3.17027166325871911923 0.9930299741736001717385
-# WFDP-Northern     -3.48773551274819304524 -6.3007049639855949863 -0.67476606151079154827 0.0085306434493431781974
-# WFDP-Southern     -3.78631993965976754168 -6.7883762590373253332 -0.78426362028220975020 0.0071682941336593808401
+#                        diff        lwr       upr     p adj
+# Northern-Andrews   -8.495812 -24.354237  7.362613 0.5049208
+# Southern-Andrews    2.174041 -14.979765 19.327847 0.9875469
+# WFDP-Andrews      -21.897533 -38.668678 -5.126388 0.0049518
+# Southern-Northern  10.669853  -7.238962 28.578668 0.4103049
+# WFDP-Northern     -13.401721 -30.944352  4.140910 0.1975852
+# WFDP-Southern     -24.071574 -42.793415 -5.349733 0.0058530
 
-# differences between WFDP-Andrews, WFDP-Northern, and WFDP-Southern 
+# differences between 
+# WFDP-Andrews = 0.005 *
+# WFDP-Southern = 0.006 * 
 
 
 # Nicer boxplot 
@@ -693,11 +695,11 @@ centroid_plot_AM
 permanova.site <- vegan::adonis2(aitchison_AM ~ Site, data = sample_metadata, method = "euclidean", permutations = 999)
 permanova.site
 
-# vegan::adonis2(formula = aitchison_AM ~ Site, data = sample_data, permutations = 999, method = "euclidean")
-#           Df SumOfSqs      R2      F Pr(>F)    
-# Model      3    600.1 0.05313 2.3753  0.001 ***
-# Residual 127  10695.4 0.94687                  
-# Total    130  11295.5 1.00000                  
+# vegan::adonis2(formula = aitchison_AM ~ Site, data = sample_metadata, permutations = 999, method = "euclidean")
+# Df SumOfSqs      R2      F Pr(>F)    
+#   Model      3    62951 0.09633 4.4773  0.001 ***
+#Residual 126   590521 0.90367                  
+# Total    129   653472 1.00000                  
 # ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
@@ -708,259 +710,14 @@ permanova.site
 permanova.both <- vegan::adonis2(aitchison_AM ~ Site * Host_ID, data = sample_metadata, method = "euclidean", permutations = 999)
 permanova.both
 
-# explained 12.1%
+# explained 21.6%
 
 
 permanova.both2 <- vegan::adonis2(aitchison_AM ~ Site + Host_ID, data = sample_metadata, method = "euclidean", permutations = 999)
 permanova.both2
 
-# explained 7.4%
+# explained 14.3%
 
-
-##################
-
-# Take distance to centroid values and regress with key environmental variables to assess if there are 
-# relationships with environmental variation across the sites
-
-# need to make dataset that has distance to centroid and the environmental variables 
-
-# Have distance to centroid and environmental data for each individual tree 
-distances_AM <- tibble::rownames_to_column(distances_AM, "Tree")
-
-sample_metadata <- rownames_to_column(sample_metadata, "Tree") 
-
-# pick some specific environmental variables of interest to compare 
-AM_env2 <- dplyr::select(sample_metadata, Tree, elev, mean_precip_mm, mean_summer_precip_mm, MAT, pct_N, pct_C, Sand, 
-                                          ph, org_matter, EC, avg_July_SPEI, count_mod_dry, count_sev_dry, apr1_SWE)
-
-# combine with the distance to centroid summary table
-centroid_enviro <- merge(distances_AM, AM_env2, by = "Tree")
-
-
-### Testing these using the individual tree data
-
-## Elevation
-elev <- ggplot(centroid_enviro, aes(x = elev, y = DistanceToCentroid)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_minimal()
-elev
-
-# test relationships 
-lm_elev <- lm(DistanceToCentroid ~ elev, data = centroid_enviro)
-summary(lm_elev) # not significant 
-
-
-## Mean annual precip
-MAP <- ggplot(centroid_enviro, aes(x = mean_precip_mm, y = DistanceToCentroid)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_minimal()
-MAP
-
-# test relationships 
-lm_MAP <- lm(DistanceToCentroid ~ mean_precip_mm, data = centroid_enviro)
-summary(lm_MAP) # SIGNIFICANT 
-
-# Adjusted R-squared:  0.029659531203348743 p-value: 0.027950397405689189
-
-
-## Mean summer precip
-MSP <- ggplot(centroid_enviro, aes(x = mean_summer_precip_mm, y = DistanceToCentroid)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_minimal()
-MSP
-
-# test relationships 
-lm_MSP <- lm(DistanceToCentroid ~ mean_summer_precip_mm, data = centroid_enviro)
-summary(lm_MSP) # not significant 
-
-
-
-## MAT
-MAT <- ggplot(centroid_enviro, aes(x = MAT, y = DistanceToCentroid)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_minimal()
-MAT
-
-# test relationships 
-lm_MAT <- lm(DistanceToCentroid ~ MAT, data = centroid_enviro)
-summary(lm_MAT) # not significant 
-
-
-## Soil percent C
-pctC <- ggplot(centroid_enviro, aes(x = pct_C, y = DistanceToCentroid)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_minimal()
-pctC
-
-# test relationships 
-lm_pctC <- lm(DistanceToCentroid ~ pct_C, data = centroid_enviro)
-summary(lm_pctC) # SIGNIFICANT 
-
-# Adjusted R-squared:  0.04799103774521396 , p-value: 0.0070390795428453183
-
-
-## Soil sand fraction
-sand <- ggplot(centroid_enviro, aes(x = Sand, y = DistanceToCentroid)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_minimal()
-sand
-
-# test relationships 
-lm_sand <- lm(DistanceToCentroid ~ Sand, data = centroid_enviro)
-summary(lm_sand) # SIGNIFICANT 
-
-# Adjusted R-squared:  0.036548945655343834 , p-value: 0.016586243849719993
-
-
-## pH
-ph <- ggplot(centroid_enviro, aes(x = ph, y = DistanceToCentroid)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_minimal()
-ph
-
-# test relationships 
-lm_ph <- lm(DistanceToCentroid ~ ph, data = centroid_enviro)
-summary(lm_ph) # not significant 
-
-
-## Cation exchange capacity (EC)
-EC <- ggplot(centroid_enviro, aes(x = EC, y = DistanceToCentroid)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_minimal()
-EC
-
-# test relationships 
-lm_EC <- lm(DistanceToCentroid ~ EC, data = centroid_enviro)
-summary(lm_EC) # SIGNIFICANT 
-
-# Adjusted R-squared:  0.070076295061323068 ,  p-value: 0.001362559113534833
-
-
-## Average July SPEI (avg_July_SPEI)
-SPEI <- ggplot(centroid_enviro, aes(x = avg_July_SPEI, y = DistanceToCentroid)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_minimal()
-SPEI
-
-# test relationships 
-lm_SPEI <- lm(DistanceToCentroid ~ avg_July_SPEI, data = centroid_enviro)
-summary(lm_SPEI) # not significant 
-
-
-## Count of Moderate Dry Months (count_mod_dry)
-MOD <- ggplot(centroid_enviro, aes(x = count_mod_dry, y = DistanceToCentroid)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_minimal()
-MOD
-
-# test relationships 
-lm_MOD <- lm(DistanceToCentroid ~ count_mod_dry, data = centroid_enviro)
-summary(lm_MOD) # not significant 
-
-## Count of Severe Dry Months (count_mod_dry)
-SEV <- ggplot(centroid_enviro, aes(x = count_sev_dry, y = DistanceToCentroid)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_minimal()
-SEV
-
-# test relationships 
-lm_SEV <- lm(DistanceToCentroid ~ count_sev_dry, data = centroid_enviro)
-summary(lm_SEV) # not significant 
-
-
-## Average April 1 Snow Water Equivalent (apr1_SWE)
-SWE <- ggplot(centroid_enviro, aes(x = apr1_SWE, y = DistanceToCentroid)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_minimal()
-SWE
-
-# test relationships 
-lm_SWE <- lm(DistanceToCentroid ~ apr1_SWE, data = centroid_enviro)
-summary(lm_SWE) # Not significant 
-
-
-### PLOT SIGNIFICANT RELATIONSHIPS ###
-
-# Factors related to soil and drought 
-
-#set colors for sites 
-palette <- c("#580E70", "#47E5BB", "#F8BD4B", "#9D072C")
-
-# removed the legends from these so they will plot better as panels. Can add back in using theme(legend.position = "right")
-
-
-# Mean Annual Precip
-MAP_plot <- ggplot(centroid_enviro, aes(x = mean_precip_mm, y = DistanceToCentroid, colour = Site)) +
-  geom_point(size = 2) +
-  geom_smooth(method = "lm", se = TRUE, linetype = "solid", color = "gray40") +
-  theme_minimal() +
-  labs(x = "Mean Annual Precipitation (mm)", y = "Distance to Centroid") +
-  scale_colour_manual(values=palette, 
-                      name="Site",
-                      breaks=c("Northern", "WFDP", "Andrews", "Southern"),
-                      labels=c("Northern", "WFDP", "Andrews", "Southern")) +
-  theme(legend.position = "NONE")
-
-MAP_plot
-
-# Soil C
-soil_C_plot <- ggplot(centroid_enviro, aes(x = pct_C, y = DistanceToCentroid, colour = Site)) +
-  geom_point(size = 2) +
-  geom_smooth(method = "lm", se = TRUE, linetype = "solid", color = "gray40") +
-  theme_minimal() +
-  labs(x = "Soil C (%)", y = "Distance to Centroid") +
-  scale_colour_manual(values=palette, 
-                    name="Site",
-                    breaks=c("Northern", "WFDP", "Andrews", "Southern"),
-                    labels=c("Northern", "WFDP", "Andrews", "Southern")) +
-  theme(legend.position = "NONE")
-
-soil_C_plot
-
-# Soil Sand Fraction
-soil_Sand_plot <- ggplot(centroid_enviro, aes(x = Sand, y = DistanceToCentroid, colour = Site)) +
-  geom_point(size = 2) +
-  geom_smooth(method = "lm", se = TRUE, linetype = "solid", color = "gray40") +
-  theme_minimal() +
-  labs(x = "Soil Sand (%)", y = "Distance to Centroid") +
-  scale_colour_manual(values=palette, 
-                      name="Site",
-                      breaks=c("Northern", "WFDP", "Andrews", "Southern"),
-                      labels=c("Northern", "WFDP", "Andrews", "Southern")) +
-  theme(legend.position = "NONE")
-
-soil_Sand_plot
-
-
-# Soil Cation Exchange Capacity
-soil_EC_plot <- ggplot(centroid_enviro, aes(x = EC, y = DistanceToCentroid, colour = Site)) +
-  geom_point(size = 2) +
-  geom_smooth(method = "lm", se = TRUE, linetype = "solid", color = "gray40") +
-  theme_minimal() +
-  labs(x = "Soil Cation Exchange Capacity (mmhos/cm)", y = "Distance to Centroid") +
-  scale_colour_manual(values=palette, 
-                      name="Site",
-                      breaks=c("Northern", "WFDP", "Andrews", "Southern"),
-                      labels=c("Northern", "WFDP", "Andrews", "Southern")) +
-  theme(legend.position = "NONE")
-
-soil_EC_plot
-
-
-# Could do a nice multi-panel figure with these using cowplot
-cowplot::plot_grid(MAP_plot, soil_C_plot, soil_Sand_plot, soil_EC_plot, nrow = 2, ncol = 2)
 
 ##############
 
@@ -970,7 +727,7 @@ betadisper.host <- betadisper(aitchison_AM, sample_metadata$Host_ID, type = "med
 betadisper.host
 
 permutest(betadisper.host)
-#groups are different p = 0.006
+#groups are different p = 0.001
 
 #if the dispersion is different between groups, then examine
 plot(betadisper.host, axes = c(1,2), ellipse = FALSE, segments = FALSE, lty = "solid", label = TRUE, 
@@ -987,13 +744,13 @@ plot(mod.HSD.host)
 # Fit: aov(formula = distances ~ group, data = df)
 # 
 # $group
-#                    diff                     lwr                    upr                    p adj
-# TABR-ALRU -3.31530020863627861161 -5.59337401409472967373 -1.0372264031778279936 0.0021750063351846371518
-# THPL-ALRU -0.92395871263581419441 -3.14136766431316827308  1.2934502390415398843 0.5856714944069845163455
-# THPL-TABR  2.39134149600046441719  0.18807643849146904458  4.5946065535094593457 0.0299318872859100082451
+#              diff        lwr       upr      p adj
+# TABR-ALRU -26.74842 -39.720975 -13.775865 0.0000089
+# THPL-ALRU -10.85403 -23.481131   1.773063 0.1072439
+# THPL-TABR  15.89439   3.347832  28.440940 0.0089417
 
-# TABR - ALRU 0.002
-# TABR - THPL 0.030
+# TABR - ALRU 0.00000008 ***
+# TABR - THPL 0.0089 *
 
 # Nicer boxplot 
 distances_AM2 <- data.frame(
@@ -1023,18 +780,6 @@ centroid_plot_AM2
 permanova.host <- vegan::adonis2(aitchison_AM ~ Host_ID, data = sample_metadata, method = "euclidean", permutations = 999)
 permanova.host
 
-# Permutation test for adonis under reduced model
-# Permutation: free
-# Number of permutations: 999
-# 
-# vegan::adonis2(formula = aitchison_AM ~ Host_ID, data = sample_metadata, permutations = 999, method = "euclidean")
-#            Df              SumOfSqs                    R2                   F Pr(>F)
-# Model      2   195.583621138572653 0.0185561788495433692 1.20059999999999989  0.131
-# Residual 127 10344.497002377596800 0.9814438211504564746                           
-# Total    129 10540.080623516170817 1.0000000000000000000  
-
-# Not significant, explains only 1.9% 
-
 
 ########
 
@@ -1045,9 +790,5 @@ permanova.host
 # simple linear relationships are an over-simplification here. 
 
 
-
-# Save centroid_enviro_EM dataframe to use in future analyses 
-
-write.csv(centroid_enviro, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_centroid_distance_enviro.csv")
-
+## -- END -- ## 
 
