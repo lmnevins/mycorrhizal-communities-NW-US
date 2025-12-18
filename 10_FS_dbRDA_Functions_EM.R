@@ -3,7 +3,7 @@
 # on functions of EM communities
 # Original author: L. McKinley Nevins 
 # Following: https://www.davidzeleny.net/anadat-r/doku.php/en:forward_sel_examples
-# February 3, 2025
+# December 16, 2025
 # Software versions:  R v 4.2.1
 #                     tidyverse v 2.0.0
 #                     phyloseq v 1.48.0
@@ -28,29 +28,36 @@ library(plotly); packageVersion("plotly")
 #                               Main workflow                                   #
 #  Perform forward selection to narrow down the most important environmental    #
 #  variables that explain variation in the community data. Then perform the     #
-#  dbRDA ordination.                                                            #             
+#  dbRDA ordination. Using the functional data derived from the compositionally #
+#  transformed data, and the aitchison distance matrix for the EM communities   #
+#  without THPL.                                                                #          
 #                                                                               #
 #################################################################################
 
+#################### -- 
+## 1. DATA PREP
+#################### -- 
+
 # Load final phyloseq object of EM community that has transformed data  
-ps_EM_clr <- readRDS("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_phyloseq_transformed_final.RDS")
+ps_EM_clr <- readRDS("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_phyloseq_transformed_final_no_THPL.RDS")
 
 # Pull out OTU table for community analyses
 spp <- otu_table(ps_EM_clr) %>% as("matrix") %>% as.data.frame()
 
 # Load in the aitchison distance matrix for the EM functional data 
-load("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/aitchison_dist_EM_traits.Rdata")
+load("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/aitchison_dist_EM_traits_no_THPL_2.0.Rdata")
 
 mat <- as.matrix(aitchison_EM_traits)
 
+
 # Load in the sample data file containing all environmental data 
-env <- read.csv(file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_enviro_trait_aitchison_subset.csv", row.names = 1)
+env <- read.csv(file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_enviro_no_THPL.csv", row.names = 1)
 
 # Trim down to just the columns with the environmental data in them 
 env <- env[ -c(1:5) ]
 
 #load original again for plotting later 
-env2 <- read.csv(file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_enviro_trait_aitchison_subset.csv", row.names = 1)
+env2 <- read.csv(file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_enviro_no_THPL.csv", row.names = 1)
 
 #############################################################################
 
@@ -75,14 +82,15 @@ high_cor_df <- data.frame(
 
 print(high_cor_df)
 
-#the threshold of R2 > 0.80 was used by Myers et al. 2013, I'm being a bit more conservative 
+#the threshold of R2 > 0.80 was used by Myers et al. 2013, I'm being a bit more conservative because the forward 
+# selection process is more sensitive to auto-correlation. 
 
 # Select a subset of environmental data that doesn't contain highly correlated variables 
 
 env <- rownames_to_column(env, "Tree")
 
 env_sub <- dplyr::select(env, Tree, lat, elev, mean_precip_mm, mean_summer_precip_mm, MAT, pct_N, 
-                         K, B, ph, Sand, EC, avg_July_SPEI, count_mod_dry, apr1_SWE)
+                         K, Fe, ph, Sand, EC, avg_July_SPEI, count_mod_dry)
 
 env_sub <- column_to_rownames(env_sub, "Tree")
 
@@ -108,11 +116,7 @@ env_scaled <- as.data.frame(scale(env_sub))
 # homogenous or heterogenous the data are 
 # This tells us if we can use a constrained method like RDA
 
-decorana(aitchison_EM_traits) #length of DCA1 is 0.7074
-
-# This has 418 trees, as a few were removed because they didn't have clr-transformed 
-# functional abundance different from the group mean (read as zeros)
-
+decorana(aitchison_EM_traits) #length of DCA1 is 0.629
 
 # Doing forward selection
 
@@ -127,7 +131,7 @@ null_model <- vegan::capscale(aitchison_EM_traits ~ 1, data = env_scaled)
 # Full model
 full_model <- vegan::capscale(aitchison_EM_traits ~ ., data = env_scaled)
 
-# Still getting a bit of redundancy in the drought and snow variables, but leaving them for now because I 
+# Still getting a bit of redundancy in the drought variables, but leaving them for now because I 
 # am interested in these still as being biologically important 
 
 # Forward selection
@@ -141,7 +145,7 @@ step_result
 step_result$anova
 
 
-# B and Sand 
+# mean_precip_mm + Sand + MAT + ph + count_mod_dry + pct_N
 
 # take env_scaled and merge host_ID to be able to model both 
 hosts <- dplyr::select(env2, Host_ID)
@@ -153,7 +157,7 @@ mod_data <- merge(hosts, env_scaled, by = "row.names")
 #performing the dbRDA
 
 #using just the 8 variables selected with forward selection plus host_ID
-EM_RDA <- capscale(formula = aitchison_EM_traits ~ Host_ID + B + Sand, 
+EM_RDA <- capscale(formula = aitchison_EM_traits ~ Host_ID + mean_precip_mm + Sand + MAT + ph + count_mod_dry + pct_N, 
                    mod_data, distance = "euclidean", sqrt.dist = FALSE,
                    comm = NULL, add = FALSE, metaMDSdist = FALSE)
 
@@ -172,7 +176,7 @@ adjusted_p <- p.adjust(raw_p, method = "bonferroni")
 anova_results$Adjusted_P <- adjusted_p
 print(anova_results)
 
-# Only B significant 
+# count_mod_dry (0.007) and pct_N (0.014) still significant after p-value adjustment, host ID was not. 
 
 summary(EM_RDA)
 
@@ -180,21 +184,21 @@ screeplot(EM_RDA)
 
 EM_RDA
 
-#                 Inertia Proportion Rank
-# Total         476.37050    1.00000     
-# Constrained    23.90056    0.05017    9
-# Unconstrained 452.46994    0.94983   14
+# Inertia Proportion Rank
+# Total         20.50453    1.00000     
+# Constrained    1.90360    0.09284   12
+# Unconstrained 18.60093    0.90716   13
 
-# 5% of the variance is explained by the environmental variables and host 
+# 9.3% of the variance is explained by the environmental variables and host 
 # Inertia = total variation in the data 
 
-#                          CAP1   CAP2    
-# Eigenvalue            11.2035 8.3427 
-# Proportion Explained   0.4688 0.3491 
-# Cumulative Proportion  0.4688 0.8178 
+#                        CAP1   CAP2    
+# Eigenvalue            1.1848 0.3386 
+# Proportion Explained  0.6224 0.1779 
+# Cumulative Proportion 0.6224 0.8003
 
 
-#First axis explained 46.9% of the variation explained by the overall model (5.5%)
+#First axis explained 62.2% of the variation explained by the overall model (9.3%)
 
 
 plot(EM_RDA)
@@ -217,7 +221,7 @@ env_df$Variable <- gsub("Host_ID", "", env_df$Variable)
 
 # Add a column that specifies the type of enviro data so I can change the font color for the 
 # enviornmental variables vs the host species 
-env_df$Type <- c("Host", "Host", "Host", "Host", "Host", "Host", "Host", "Enviro", "Enviro")
+env_df$Type <- c("Host", "Host", "Host", "Host", "Host", "Host", "Enviro", "Enviro", "Enviro", "Enviro", "Enviro", "Enviro")
 
 env_df$Type <- as.factor(env_df$Type)
 
@@ -231,8 +235,8 @@ newSTorder <- c("Northern", "WFDP", "Andrews", "Southern")
 site_df$Site <- factor(site_df$Site, levels = newSTorder)
 
 # set colors for hosts 
-# ABAM        ABGR        ABPR          ALRU         PSME         TABR         THPL       TSHE        
-all_hosts <- c("#0D0887FF", "#5402A3FF", "#8B0AA5FF", "#B93289FF", "#DB5C68FF", "#F48849FF", "#ffe24cFF", "#fffd66")
+                  # ABAM        ABGR        ABPR          ALRU         PSME         TABR       TSHE        
+all_hosts <- c("#0D0887FF", "#5402A3FF", "#8B0AA5FF", "#B93289FF", "#DB5C68FF", "#F48849FF", "#fffd66")
 
 sites <- c(15,16,17,18)
 
@@ -254,11 +258,11 @@ p <- ggplot() +
                      labels=c("Northern", "WFDP", "Andrews", "Southern")) +
   scale_colour_manual(values=all_hosts, 
                       name="Host Tree Species",
-                      breaks=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "THPL", "TSHE"),
-                      labels=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "THPL", "TSHE")) +
+                      breaks=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE"),
+                      labels=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE")) +
   theme_bw() +
-  labs(x = "CAP1 (46.88%)",
-       y = "CAP2 (34.91%)",
+  labs(x = "CAP1 (62.24%)", # Remember to update to new values! 
+       y = "CAP2 (17.79%)", # Remember to update to new values! 
        color = "Site") +
   coord_cartesian()  +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
@@ -267,4 +271,7 @@ p <- ggplot() +
         axis.text.y = element_text(colour="black", size = 11))
 
 p
+
+
+## -- END -- ## 
 

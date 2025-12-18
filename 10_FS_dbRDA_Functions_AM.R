@@ -43,18 +43,14 @@ load("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/aitchison_dist_
 
 mat <- as.matrix(aitchison_AM_traits)
 
-# 105 trees as many were excluded as not having functional variation different from the mean of the 
-# community 
-
-
 # Load in the sample data file containing the subset of environmental data 
-env <- read.csv(file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_enviro_trait_aitchison_subset.csv", row.names = 1)
+env <- read.csv(file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_enviro_all_2025.csv", row.names = 1)
 
 # Trim down to just the columns with the environmental data in them 
 env <- env[ -c(1:5) ]
 
 #load original again for plotting later 
-env2 <- read.csv(file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_enviro_trait_aitchison_subset.csv", row.names = 1)
+env2 <- read.csv(file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_enviro_all_2025.csv", row.names = 1)
 
 #############################################################################
 
@@ -82,9 +78,12 @@ print(high_cor_df)
 
 # Select a subset of environmental data that doesn't contain highly correlated variables 
 
+
+# pct_N, ph, Sand, elev, EC, avg_July_SPEI, MAT, mean_summer_precip_mm, apr1_SWE
+
 env <- rownames_to_column(env, "Tree")
 
-env_sub <- dplyr::select(env, Tree, elev, mean_precip_mm, MAT, pct_N, ph, Sand, count_mod_dry, apr1_SWE)
+env_sub <- dplyr::select(env, Tree, pct_N, ph, Sand, elev, EC, avg_July_SPEI, MAT, mean_summer_precip_mm, apr1_SWE)
 
 env_sub <- column_to_rownames(env_sub, "Tree")
 
@@ -106,7 +105,7 @@ env_scaled <- as.data.frame(scale(env_sub))
 # homogenous or heterogenous the data are 
 # This tells us if we can use a constrained method like RDA
 
-decorana (aitchison_AM_traits) #length of DCA1 is 1.4383
+decorana (aitchison_AM_traits) #length of DCA1 is 1.6152
 
 
 # Doing forward selection
@@ -122,6 +121,8 @@ null_model <- vegan::capscale(aitchison_AM_traits ~ 1, data = env_scaled)
 # Full model
 full_model <- vegan::capscale(aitchison_AM_traits ~ ., data = env_scaled)
 
+# a few variables are still colinear, but I'm going to leave them in because I think they are important 
+
 # Forward selection
 step_result <- ordistep(null_model, scope = formula(full_model), direction = "forward", permutations = 9999)
 
@@ -133,7 +134,7 @@ step_result
 step_result$anova
 
 
-# apr1_SWE, pct_N, count_mod_dry and elev significant 
+# only avg_July_SPEI was significant 
 
 # take env_scaled and merge host_ID to be able to model both 
 hosts <- dplyr::select(env2, Host_ID)
@@ -145,8 +146,8 @@ mod_data <- merge(hosts, env_scaled, by = "row.names")
 #performing the dbRDA
 
 #using just the 2 variables selected with forward selection 
-AM_RDA <- capscale(formula = aitchison_AM_traits ~ Host_ID + apr1_SWE + pct_N + count_mod_dry + elev
-                   , mod_data, distance = "euclidean", sqrt.dist = FALSE,
+AM_RDA <- capscale(formula = aitchison_AM_traits ~ Host_ID + avg_July_SPEI,
+                   mod_data, distance = "euclidean", sqrt.dist = FALSE,
                    comm = NULL, add = FALSE, metaMDSdist = FALSE)
 
 
@@ -164,7 +165,7 @@ adjusted_p <- p.adjust(raw_p, method = "bonferroni")
 anova_results$Adjusted_P <- adjusted_p
 print(anova_results)
 
-# Only pct_N and count_mod_dry still significant 
+# Only host still significant 
 
 summary(AM_RDA)
 
@@ -172,22 +173,23 @@ screeplot(AM_RDA)
 
 AM_RDA
 
-# Partitioning of squared Euclidean distance:
-#                 Inertia Proportion
-# Total          132.24     1.0000
-# Constrained     60.58     0.4581
+# Partitioning of mean squared Euclidean distance:
+#   Inertia Proportion
+# Total          22.732     1.0000
+# Constrained     2.662     0.1171
+# Unconstrained  20.069     0.8829
 
-# 45.8% of the variance is explained by the environmental variables 
+# 11.7% of the variance is explained by the environmental variables 
 # Inertia = total variation in the data 
 
 
 # Importance of components:
-#                          CAP1    CAP2      CAP3    
-# Eigenvalue            59.0601 1.39298 0.1303568 
-# Proportion Explained   0.4466 0.01053 0.0009857  
-# Cumulative Proportion  0.4466 0.45713 0.4581187  
+#                         CAP1   CAP2
+# Eigenvalue            2.3526 0.3097
+# Proportion Explained  0.8837 0.1163
+# Cumulative Proportion 0.8837 1.0000
 
-#First axis explained 45% of the variation explained by the overall model (45%)
+#First axis explained 88.4% of the variation explained by the overall model (11.7%)
 #So the first axis is really carrying the team. 
 
 
@@ -211,7 +213,7 @@ env_df$Variable <- gsub("Host_ID", "", env_df$Variable)
 
 # Add a column that specifies the type of enviro data so I can change the font color for the 
 # environmental variables vs the host species 
-env_df$Type <- c("Host", "Host", "Enviro", "Enviro", "Enviro", "Enviro")
+env_df$Type <- c("Host", "Host", "Enviro")
 
 env_df$Type <- as.factor(env_df$Type)
 
@@ -254,8 +256,8 @@ q <- ggplot() +
                       breaks=c("ALRU", "TABR", "THPL"),
                       labels=c("ALRU", "TABR", "THPL")) +
   theme_bw() +
-  labs(x = "CAP1 (44.66%)",
-       y = "CAP2 (10.53%)",
+  labs(x = "CAP1 (88.37%)",
+       y = "CAP2 (11.63%)",
        color = "Site") +
   coord_cartesian()  +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
