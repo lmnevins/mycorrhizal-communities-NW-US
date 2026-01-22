@@ -10,8 +10,16 @@
 #                     purrr v 1.0.4
 #                     ALDEx2 v 1.36.0
 #                     ggplot2 v 3.5.1
+#                     broom v 1.0.11
 #                     
 # -----------------------------------------------------------------------------#
+
+
+if (!require("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install("ALDEx2")
+
 
 # PACKAGES, SCRIPTS, AND SETUP ####
 require(tidyverse); packageVersion("tidyverse")
@@ -21,6 +29,7 @@ require(dplyr); packageVersion("dplyr")
 require(purrr); packageVersion("purrr")
 require(ALDEx2); packageVersion("ALDEx2")
 require(ggplot2); packageVersion("ggplot2")
+require(broom); packageVersion("broom")
 
 #################################################################################
 #                               Main workflow                                   #
@@ -466,7 +475,7 @@ sample_metadata$sample_code <- sample_metadata$X
 # expectations for being important 
 
 env_vars <- c("elev", "mean_precip_mm", "mean_summer_precip_mm", "MAT", "pct_C", "pct_N", "ph", "org_matter", "Sand", "Silt",
-              "Clay", "EC", "tot_bases", "avg_July_SPEI", "count_mod_dry", "count_sev_dry", "apr1_SWE")
+              "Clay", "tot_bases", "avg_July_SPEI", "count_mod_dry", "count_sev_dry", "apr1_SWE")
 
 # Make an empty list to store results
 extreme_tree_groups_list <- list()
@@ -479,18 +488,32 @@ for (var in env_vars) {
     group_by(Host_ID, Site) %>%
     summarise(mean_env = mean(.data[[var]], na.rm = TRUE), .groups = "drop")
   
-  # Step 2: Identify the highest and lowest site for each species
+  # Step 2: Select exactly one low and one high site per species
   extremes <- avg_env %>%
     group_by(Host_ID) %>%
-    filter(mean_env == max(mean_env) | mean_env == min(mean_env)) %>%
-    mutate(Env_Group = ifelse(mean_env == min(mean_env), "Low", "High")) %>%
-    ungroup()
+    summarise(
+      Low_Site  = Site[which.min(mean_env)],
+      Low_Env   = min(mean_env),
+      High_Site = Site[which.max(mean_env)],
+      High_Env  = max(mean_env),
+      .groups = "drop"
+    ) %>%
+    pivot_longer(
+      cols = c(Low_Site, High_Site, Low_Env, High_Env),
+      names_to = c("Env_Group", ".value"),
+      names_pattern = "(Low|High)_(.*)"
+    )
   
-  # Step 3: Tag the individual trees that match those sites and species
+  # Step 3: Tag individual trees and carry env values forward
   tree_tags <- sample_metadata %>%
     inner_join(extremes, by = c("Host_ID", "Site")) %>%
-    dplyr::select(sample_code, Host_ID, Site, Env_Group) %>%
-    mutate(Environmental_Var = var)
+    mutate(
+      Environmental_Var = var
+    ) %>%
+    dplyr::select(
+      sample_code, Host_ID, Site,
+      Env_Group, mean_env = Env, Environmental_Var
+    )
   
   # Add this to the list
   extreme_tree_groups_list[[var]] <- tree_tags
@@ -498,6 +521,29 @@ for (var in env_vars) {
 
 # Combine everything into a single data frame
 extreme_tree_groups <- bind_rows(extreme_tree_groups_list)
+
+# save df 
+
+write.csv(extreme_tree_groups, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_extreme_tree_groups.csv")
+
+###########
+
+# Environmental values are at the site level, and not replicated at the tree level, so there's no way to do 
+# a real statistical test to see if the values are singificantly different from eachother at the high and 
+# low ends of severity. But, this summarizes the values, and can be filtered to just the variables that 
+# had differentially abundant taxa 
+
+
+# Make a summary table of Low vs High values per species & env variable
+env_comparisons <- extreme_tree_groups %>%
+  group_by(Host_ID, Site, Environmental_Var, Env_Group) %>%
+  summarise(
+    mean_env_value = mean(mean_env, na.rm = TRUE)) %>%
+  pivot_wider(
+    names_from = Env_Group,
+    values_from = mean_env_value
+  )
+
 
 ###########
 # ALDEx2
@@ -662,6 +708,8 @@ extremes_sig_results <- dplyr::select(extremes_sig_results, we.eBH, effect, ASV,
 # Save file 
 write.csv(extremes_sig_results, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_extremes_diff_abund.csv")
 
+#  extremes_sig_results <- read.csv("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_extremes_diff_abund.csv")
+
 ############################
 ## Visualize in a more exciting way than just a table 
 
@@ -739,16 +787,18 @@ bubble_AM <- ggplot(extremes_sig_results, aes(y = Environmental_Var,
                                               x = ASV, size = abs(effect), color = effect)) +
   geom_point(aes(size = abs(effect), color = effect)) +
   scale_color_gradient2(low = "blue", mid = "grey90", high = "red", midpoint = 0,
-    limits = c(-3.5, 3.5), name = "Effect size") +
-  scale_size_continuous(name = "|Effect size|", limits = c(0, 3.5)) +
+    limits = c(-3.7, 3.7), name = "Effect size") +
+  scale_size_continuous(name = "|Effect size|", limits = c(0, 3.7)) +
   facet_wrap(~ Host_ID, scales = "free_y", nrow = 2) +
-  theme_minimal(base_size = 12) +
+  theme_minimal(base_size = 14) +
   theme(panel.border = element_rect(color = "black", fill = NA, size = 1)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, color = "black"),
-        axis.text.y = element_text(color = "black"),
-        panel.grid = element_blank()) +
+        axis.text.y = element_text(color = "black", size = 14), panel.grid = element_blank()) + 
+  theme(legend.text = element_text(colour="black", size = 14)) +
+  theme(strip.text = element_text(size = 14, colour="black")) +
+  theme(axis.title = element_text(colour="black", size = 14)) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
-  labs(y = "Environmental Factor", x = "")
+  labs(y = "", x = "")
 
 bubble_AM
 
