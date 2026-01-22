@@ -165,7 +165,7 @@ adjusted_p <- p.adjust(raw_p, method = "bonferroni")
 anova_results$Adjusted_P <- adjusted_p
 print(anova_results)
 
-# Only host still significant 
+# Only host still significant (0.002)
 
 summary(AM_RDA)
 
