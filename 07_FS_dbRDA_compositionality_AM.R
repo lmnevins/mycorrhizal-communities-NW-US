@@ -6,21 +6,40 @@
 # April 24, 2025
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
-#                     phyloseq v 1.48.0
-#                     vegan v 2.6.10
-#                     adespatial v 0.3.24
+#                     phyloseq v 1.54.0
+#                     vegan v 2.7.2
+#                     adespatial v 0.3.28
+#                     ggord v 1.1.8
+#                     ggordiplots v 0.4.3
+#                     plotly v 4.11.0
+#                     ggrepel v 0.9.6
 # -----------------------------------------------------------------------------#
+
+
+if (!require("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install("phyloseq")
+
+
+# Enable the r-universe repo
+options(repos = c(
+  fawda123 = 'https://fawda123.r-universe.dev',
+  CRAN = 'https://cloud.r-project.org'))
+
+# Install ggord
+install.packages('ggord')
+
 
 # PACKAGES, SCRIPTS, AND SETUP ####
 library(tidyverse); packageVersion("tidyverse")
 library(phyloseq); packageVersion("phyloseq")
 library(vegan); packageVersion("vegan")
 library(adespatial); packageVersion("adespatial")
-library(ggord): packageVersion("ggord")
-library(ggordiplots): packageVersion("ggordiplots")
-library(BiodiversityR); packageVersion("BiodiversityR")
-library(ggvegan); packageVersion("ggvegan")
+library(ggord); packageVersion("ggord")
+library(ggordiplots); packageVersion("ggordiplots")
 library(plotly); packageVersion("plotly")
+library(ggrepel); packageVersion("ggrepel")
 
 #################################################################################
 #                               Main workflow                                   #
@@ -35,7 +54,7 @@ library(plotly); packageVersion("plotly")
 ps_AM_clr <- readRDS("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_phyloseq_transformed_final.RDS")
 
 # Pull out OTU table for community analyses
-spp <- otu_table(ps_AM_clr) %>% as("matrix") %>% as.data.frame()
+spp <- phyloseq::otu_table(ps_AM_clr) %>% as("matrix") %>% as.data.frame()
 
 # Load in the aitchison distance matrix for the AM data 
 load("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/aitchison_dist_AM_2025.Rdata")
@@ -80,13 +99,13 @@ print(high_cor_df)
 # Select a subset of environmental data that doesn't contain highly correlated variables 
 
 
-# pct_N, ph, Sand, elev, EC, avg_July_SPEI, MAT, mean_summer_precip_mm, apr1_SWE
+# pct_N, ph, Sand, elev, avg_July_SPEI, MAT, mean_summer_precip_mm, apr1_SWE
 
-env <- rownames_to_column(env, "Tree")
+env <- tibble::rownames_to_column(env, "Tree")
 
-env_sub <- dplyr::select(env, Tree, pct_N, ph, Sand, elev, EC, avg_July_SPEI, MAT, mean_summer_precip_mm, apr1_SWE)
+env_sub <- dplyr::select(env, Tree, pct_N, ph, Sand, elev, avg_July_SPEI, MAT, mean_summer_precip_mm, apr1_SWE)
 
-env_sub <- column_to_rownames(env_sub, "Tree")
+env_sub <- tibble::column_to_rownames(env_sub, "Tree")
 
 
 # need to center and scale the environmental variables
@@ -135,7 +154,7 @@ step_result
 step_result$anova
 
 
-# ph + elev + Sand + apr1_SWE significant 
+# ph + elev + Sand + avg_July_SPEI significant 
 
 # take env_scaled and merge host_ID to be able to model both 
 hosts <- dplyr::select(env2, Host_ID)
@@ -147,7 +166,7 @@ mod_data <- merge(hosts, env_scaled, by = "row.names")
 #performing the dbRDA
 
 #using just the 2 variables selected with forward selection 
-AM_RDA <- capscale(formula = aitchison_AM ~ Host_ID + ph + elev + Sand + apr1_SWE,
+AM_RDA <- capscale(formula = aitchison_AM ~ Host_ID + ph + elev + Sand + avg_July_SPEI,
                    mod_data, distance = "euclidean", sqrt.dist = FALSE,
                    comm = NULL, add = FALSE, metaMDSdist = FALSE)
 
@@ -166,7 +185,7 @@ adjusted_p <- p.adjust(raw_p, method = "bonferroni")
 anova_results$Adjusted_P <- adjusted_p
 print(anova_results)
 
-# All still significant, plus host! 
+# Host (0.005), pH (0.005), elev (0.010), Sand (0.025) and avg_July_SPEI (0.010) significant 
 
 summary(AM_RDA)
 
@@ -174,22 +193,22 @@ screeplot(AM_RDA)
 
 AM_RDA
 
-#                  Inertia Proportion Rank
+#                   Inertia Proportion Rank
 # Total         5065.6776     1.0000     
-# Constrained    840.0773     0.1658    6
-# Unconstrained 4225.6003     0.8342  123
+# Constrained    840.1385     0.1658    6
+# Unconstrained 4225.5391     0.8342  123
 
 # 16.6% of the variance is explained by the environmental variables 
 # Inertia = total variation in the data 
 
 
 # Importance of components:
-#                          CAP1     CAP2    
-# Eigenvalue            321.1714 241.4201 
-# Proportion Explained    0.3823   0.2874   
-# Cumulative Proportion   0.3823   0.6697 
+#                         CAP1     CAP2     
+# Eigenvalue            322.1117 236.5270
+# Proportion Explained    0.3834   0.2815
+# Cumulative Proportion   0.3834   0.6649 
 
-#First axis explained 38% of the variation explained by the overall model (16.6%)
+#First axis explained 38.3% of the variation explained by the overall model (16.6%)
 #So the first axis is really carrying the team. 
 
 
@@ -256,8 +275,8 @@ q <- ggplot() +
                       breaks=c("ALRU", "TABR", "THPL"),
                       labels=c("ALRU", "TABR", "THPL")) +
   theme_bw() +
-  labs(x = "CAP1 (38.23%)",
-       y = "CAP2 (28.74%)",
+  labs(x = "CAP1 (38.34%)",
+       y = "CAP2 (28.15%)",
        color = "Site") +
   coord_cartesian()  +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +

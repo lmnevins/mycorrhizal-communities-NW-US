@@ -88,7 +88,7 @@ print(high_cor_df)
 env <- rownames_to_column(env, "Tree")
 
 env_sub <- dplyr::select(env, Tree, lat, elev, mean_precip_mm, mean_summer_precip_mm, MAT, pct_N, 
-                         K, Fe, ph, Sand, EC, avg_July_SPEI, count_mod_dry)
+                         ph, Sand, EC, avg_July_SPEI, count_mod_dry)
 
 env_sub <- column_to_rownames(env_sub, "Tree")
 
@@ -144,7 +144,7 @@ step_result
 step_result$anova
 
 
-# pct_N + ph + lat + avg_July_SPEI + Sand + mean_precip_mm + count_mod_dry + K + EC + mean_summer_precip_mm + elev
+# pct_N + ph + lat + avg_July_SPEI + Sand + mean_precip_mm + count_mod_dry + mean_summer_precip_mm + elev
 
 # take env_scaled and merge host_ID to be able to model both 
 hosts <- dplyr::select(env2, Host_ID)
@@ -156,8 +156,8 @@ mod_data <- merge(hosts, env_scaled, by = "row.names")
 #performing the dbRDA
 
 #using just the 9 variables selected with forward selection plus host_ID
-EM_RDA <- capscale(formula = aitchison_EM ~ Host_ID + pct_N + ph + lat + avg_July_SPEI + Sand + mean_precip_mm + 
-                     count_mod_dry + K + EC + mean_summer_precip_mm + elev, 
+EM_RDA <- capscale(formula = aitchison_EM ~ Host_ID + pct_N + ph + lat + avg_July_SPEI + Sand + 
+                     mean_precip_mm + count_mod_dry + mean_summer_precip_mm + elev, 
                    mod_data, distance = "euclidean", sqrt.dist = FALSE,
                    comm = NULL, add = FALSE, metaMDSdist = FALSE)
 
@@ -176,7 +176,8 @@ adjusted_p <- p.adjust(raw_p, method = "bonferroni")
 anova_results$Adjusted_P <- adjusted_p
 print(anova_results)
 
-# Only Host_ID (0.012), K (0.036), and EC (0.024) significant after p-value adjustment 
+# Only Host_ID (0.01), lat (0.05), and sand (0.01), mean_precip (0.03), 
+# count_mod_dry (0.01), mean summer precip (0.01), and elev (0.01) significant after p-value adjustment 
 
 summary(EM_RDA)
 
@@ -185,21 +186,21 @@ screeplot(EM_RDA)
 EM_RDA
 
 # Partitioning of mean squared Euclidean distance:
-#                  Inertia Proportion
+#                 Inertia Proportion
 # Total          3503.0    1.00000
-# Constrained     309.3    0.08831
-# Unconstrained  3193.6    0.91169
+# Constrained     285.3    0.08145
+# Unconstrained  3217.7    0.91855
 
-# 8.8% of the variance is explained by the environmental variables and host 
+# 8.1% of the variance is explained by the environmental variables and host 
 # Inertia = total variation in the data 
 
-#                         CAP1    CAP2    
-# Eigenvalue            71.7292 43.5389
-# Proportion Explained   0.2319  0.1407 
-# Cumulative Proportion  0.2319  0.3726
+#                         CAP1    CAP2     
+# Eigenvalue            70.5844 42.1546 
+# Proportion Explained   0.2474  0.1478  
+# Cumulative Proportion  0.2474  0.3952
 
 
-#First axis explained 23.2% of the variation explained by the overall model (8.8%)
+#First axis explained 24.7% of the variation explained by the overall model (8.1%)
 
 
 plot(EM_RDA)
@@ -223,7 +224,7 @@ env_df$Variable <- gsub("Host_ID", "", env_df$Variable)
 # Add a column that specifies the type of enviro data so I can change the font color for the 
 # environmental variables vs the host species 
 env_df$Type <- c("Host", "Host", "Host", "Host", "Host", "Host", "Enviro", "Enviro", "Enviro",
-          "Enviro", "Enviro", "Enviro", "Enviro", "Enviro", "Enviro", "Enviro", "Enviro")
+          "Enviro", "Enviro", "Enviro", "Enviro", "Enviro", "Enviro")
 
 env_df$Type <- as.factor(env_df$Type)
 
@@ -263,8 +264,8 @@ p <- ggplot() +
                       breaks=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE"),
                       labels=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE")) +
   theme_bw() +
-  labs(x = "CAP1 (23.19%)", # Remember to update to new values! 
-       y = "CAP2 (14.07%)", # Remember to update to new values! 
+  labs(x = "CAP1 (24.74%)", # Remember to update to new values! 
+       y = "CAP2 (14.78%)", # Remember to update to new values! 
        color = "Site") +
   coord_cartesian()  +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
