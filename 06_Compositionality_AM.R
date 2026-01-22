@@ -358,7 +358,7 @@ PCA_plot_both
 PCA_plot_site <- ggplot(scores.pca_clr_AM, aes(x = PC1, y = PC2, color = Site)) +
   geom_point(size = 3) +
   stat_ellipse(aes(group = Site), type = "norm", linewidth = 1, size = 1) +
-  theme_minimal(base_size = 11) +
+  theme_minimal(base_size = 14) +
   scale_colour_manual(values=palette, 
                      name="Site",
                      breaks=c("Northern", "WFDP", "Andrews", "Southern"),
@@ -366,126 +366,18 @@ PCA_plot_site <- ggplot(scores.pca_clr_AM, aes(x = PC1, y = PC2, color = Site)) 
   labs(x = paste0("PC1 (", round(pca_var_explained[1], 1), "%)"),
        y = paste0("PC2 (", round(pca_var_explained[2], 1), "%)"), 
        color = "Site") +
+  theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
-  theme(axis.text.x = element_text(size = 11),
-        axis.text.y = element_text(size = 11)) +
+  theme(axis.text.x = element_text(colour="black", size = 14),
+        axis.text.y = element_text(colour="black", size = 14)) +
   guides(
     color = guide_legend(order = 1),
-    shape = guide_legend(order = 2)  
-  )
+    shape = guide_legend(order = 2)) + 
+  theme(legend.position = "none")
 
 PCA_plot_site
 
-
-## Try out a way to visualize differences in the communities along these two axes: 
-
-
-### Calculate average PC1 score for each site, compare statistically  ####
-
-PC1_site <- dplyr::select(scores.pca_clr_AM, PC1, Site, Host_ID)
-
-PC1_site_summary <- PC1_site %>%
-  group_by(Site) %>%
-  summarise(
-    mean_PC1 = mean(PC1, na.rm = TRUE),
-    sd_PC1   = sd(PC1, na.rm = TRUE),
-    n        = n(),
-    se_PC1   = sd_PC1 / sqrt(n)
-  )
-
-
-# Test for significant differences between species 
-aov_PC1_site <- aov(PC1 ~ Site, data = PC1_site)
-summary(aov_PC1_site) # Significant
-
-tuk_PC1_site <- TukeyHSD(aov_PC1_site)
-tuk_PC1_site
-
-# Significant differences between sites 
-# Northern-Andrews p = 0.0000008
-# Southern-Northern p = 0.0000010
-# WFDP-Northern p = 0.0055585
-
-
-# Visualize 
-
-# Define preferred order
-site_order <- c("Northern", "WFDP", "Andrews", "Southern")
-
-# Apply to site data
-PC1_site_summary$Site <- factor(PC1_site_summary$Site, levels = site_order)
-
-
-PC1_site_plot <- ggplot(PC1_site_summary, aes(x = Site, y = mean_PC1, fill = Site)) +
-  geom_col() +
-  geom_errorbar(aes(ymin = mean_PC1 - se_PC1, ymax = mean_PC1 + se_PC1), width = 0.2) +
-  theme_bw() +
-  scale_fill_manual(values=palette, 
-                    name="Site",
-                    breaks=c("Northern", "WFDP", "Andrews", "Southern"),
-                    labels=c("Northern", "WFDP", "Andrews", "Southern")) + 
-  labs(title = "", x = "", y = "PCA Axis 1") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 11)) +
-  theme(legend.title = element_text(colour="black", size=12, face="bold")) +
-  theme(legend.text = element_text(colour="black", size = 11))
-
-PC1_site_plot
-
-## Need to add significance values to this but they are a bit complicated, 
-# so can come back and do this 
-
-
-### Calculate average PC2 score for each site, compare statistically 
-
-PC2_site <- dplyr::select(scores.pca_clr_AM, PC2, Site, Host_ID)
-
-PC2_site_summary <- PC2_site %>%
-  group_by(Site) %>%
-  summarise(
-    mean_PC2 = mean(PC2, na.rm = TRUE),
-    sd_PC2   = sd(PC2, na.rm = TRUE),
-    n        = n(),
-    se_PC2   = sd_PC2 / sqrt(n)
-  )
-
-# Test for significant differences between sites
-aov_PC2_site <- aov(PC2 ~ Site, data = PC2_site)
-summary(aov_PC2_site) # Significant
-
-tuk_PC2_site <- TukeyHSD(aov_PC2_site)
-tuk_PC2_site
-
-# Significant differences between sites
-# Southern-Andrews p = 0.0227669
-# Southern-Northern p = 0.0455868
-
-
-# Visualize 
-
-# Apply order to site data
-PC2_site_summary$Site <- factor(PC2_site_summary$Site, levels = site_order)
-
-
-PC2_site_plot <- ggplot(PC2_site_summary, aes(x = Site, y = mean_PC2, fill = Site)) +
-  geom_col() +
-  geom_errorbar(aes(ymin = mean_PC2 - se_PC2, ymax = mean_PC2 + se_PC2), width = 0.2) +
-  theme_bw() +
-  scale_fill_manual(values=palette, 
-                    name="Site",
-                    breaks=c("Northern", "WFDP", "Andrews", "Southern"),
-                    labels=c("Northern", "WFDP", "Andrews", "Southern")) + 
-  labs(title = "", x = "", y = "PCA Axis 2") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 11)) +
-  theme(legend.title = element_text(colour="black", size=12, face="bold")) +
-  theme(legend.text = element_text(colour="black", size = 11))
-
-PC2_site_plot
-
-## Need to add significance values to this but they are a bit complicated, 
-# so can come back and do this 
-
-######################### 
 
 #### -- 
 
@@ -493,7 +385,7 @@ PC2_site_plot
 PCA_plot_host <- ggplot(scores.pca_clr_AM, aes(x = PC1, y = PC2, color = Host_ID)) +
   geom_point(size = 3) +
   stat_ellipse(aes(group = Host_ID), type = "norm", linewidth = 1, size = 1) +
-  theme_minimal(base_size = 11) +
+  theme_minimal(base_size = 14) +
   scale_colour_manual(values=AM_hosts, 
                       name="Host Tree Species",
                       breaks=c("ALRU", "TABR", "THPL"),
@@ -501,111 +393,17 @@ PCA_plot_host <- ggplot(scores.pca_clr_AM, aes(x = PC1, y = PC2, color = Host_ID
   labs(x = paste0("PC1 (", round(pca_var_explained[1], 1), "%)"),
        y = paste0("PC2 (", round(pca_var_explained[2], 1), "%)"), 
        color = "Host Tree Species") +
+  theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
-  theme(axis.text.x = element_text(size = 11),
-        axis.text.y = element_text(size = 11)) +
+  theme(axis.text.x = element_text(colour="black", size = 14),
+        axis.text.y = element_text(colour="black", size = 14)) +
   guides(
     color = guide_legend(order = 1),
-    shape = guide_legend(order = 2)  
-  )
+    shape = guide_legend(order = 2)) + 
+  theme(legend.position = "none")
 
 PCA_plot_host
-
-
-
-### Calculate average PC1 score for each host, compare statistically   ######
-
-PC1_host <- dplyr::select(scores.pca_clr_AM, PC1, Site, Host_ID)
-
-PC1_host_summary <- PC1_host %>%
-  group_by(Host_ID) %>%
-  summarise(
-    mean_PC1 = mean(PC1, na.rm = TRUE),
-    sd_PC1   = sd(PC1, na.rm = TRUE),
-    n        = n(),
-    se_PC1   = sd_PC1 / sqrt(n)
-  )
-
-
-# Test for significant differences between hosts 
-aov_PC1_host <- aov(PC1 ~ Host_ID, data = PC1_host)
-summary(aov_PC1_host) # NOT Significant
-
-tuk_PC1_host <- TukeyHSD(aov_PC1_host)
-tuk_PC1_host
-
-# NO Significant differences between hosts
-
-
-
-# Visualize 
-
-PC1_host_plot <- ggplot(PC1_host_summary, aes(x = Host_ID, y = mean_PC1, fill = Host_ID)) +
-  geom_col() +
-  geom_errorbar(aes(ymin = mean_PC1 - se_PC1, ymax = mean_PC1 + se_PC1), width = 0.2) +
-  theme_bw() +
-  scale_fill_manual(values=AM_hosts, 
-                    name="Host Tree Species",
-                    breaks=c("ALRU", "TABR", "THPL"),
-                    labels=c("ALRU", "TABR", "THPL")) + 
-  labs(title = "", x = "", y = "PCA Axis 1") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 11)) +
-  theme(legend.title = element_text(colour="black", size=12, face="bold")) +
-  theme(legend.text = element_text(colour="black", size = 11))
-
-PC1_host_plot
-
-## Need to add significance values to this but they are a bit complicated, 
-# so can come back and do this 
-
-
-### Calculate average PC2 score for each host, compare statistically 
-
-PC2_host <- dplyr::select(scores.pca_clr_AM, PC2, Site, Host_ID)
-
-PC2_host_summary <- PC2_host %>%
-  group_by(Host_ID) %>%
-  summarise(
-    mean_PC2 = mean(PC2, na.rm = TRUE),
-    sd_PC2   = sd(PC2, na.rm = TRUE),
-    n        = n(),
-    se_PC2   = sd_PC2 / sqrt(n)
-  )
-
-# Test for significant differences between hosts
-aov_PC2_host <- aov(PC2 ~ Host_ID, data = PC2_host)
-summary(aov_PC2_host) # Significant
-
-tuk_PC2_host <- TukeyHSD(aov_PC2_host)
-tuk_PC2_host
-
-# Significant difference between hosts
-# TABR-ALRU p = 0.0227506
-
-
-# Visualize 
-
-PC2_host_plot <- ggplot(PC2_host_summary, aes(x = Host_ID, y = mean_PC2, fill = Host_ID)) +
-  geom_col() +
-  geom_errorbar(aes(ymin = mean_PC2 - se_PC2, ymax = mean_PC2 + se_PC2), width = 0.2) +
-  theme_bw() +
-  scale_fill_manual(values=AM_hosts, 
-                    name="Host Tree Species",
-                    breaks=c("ALRU", "TABR", "THPL"),
-                    labels=c("ALRU", "TABR", "THPL")) + 
-  labs(title = "", x = "", y = "PCA Axis 2") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 11)) +
-  theme(legend.title = element_text(colour="black", size=12, face="bold")) +
-  theme(legend.text = element_text(colour="black", size = 11))
-
-PC2_host_plot
-
-## Need to add significance values to this but they are a bit complicated, 
-# so can come back and do this 
-
-#### -- 
-
 
 
 #####assess multivariate homogeneity of sites###########
@@ -675,18 +473,22 @@ distances_AM$Site <- factor(distances_AM$Site, levels = site_order)
 centroid_plot_AM <- ggplot(distances_AM, aes(x = Site, y = DistanceToCentroid, fill = Site)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.7) +
   geom_jitter(width = 0.15, size = 1.5, alpha = 0.6) +
-  theme_minimal() +
-  labs(x = "Site",
+  theme_minimal(base_size = 14) +
+  labs(x = "",
        y = "Distance to Centroid") +
   scale_fill_manual(values=palette, 
                     name="Site",
                     breaks=c("Northern", "WFDP", "Andrews", "Southern"),
                     labels=c("Northern", "WFDP", "Andrews", "Southern")) +
-  theme(legend.position = "right") +
+  theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
-  theme(axis.text.x = element_text(size = 11),
-        axis.text.y = element_text(size = 11))
+  theme(axis.text.x = element_text(colour="black", size = 14),
+        axis.text.y = element_text(colour="black", size = 14)) +
+  guides(
+    color = guide_legend(order = 1),
+    shape = guide_legend(order = 2)) + 
+  theme(legend.position = "none")
 
 centroid_plot_AM
 
@@ -761,18 +563,23 @@ distances_AM2 <- data.frame(
 centroid_plot_AM2 <- ggplot(distances_AM2, aes(x = Host, y = DistanceToCentroid, fill = Host)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.7) +
   geom_jitter(width = 0.15, size = 1.5, alpha = 0.6) +
-  theme_minimal() +
-  labs(x = "Host",
+  theme_minimal(base_size = 14) +
+  labs(x = "",
        y = "Distance to Centroid") +
   scale_fill_manual(values=AM_hosts, 
                       name="Host",
                       breaks=c("ALRU", "TABR", "THPL"),
                       labels=c("ALRU", "TABR", "THPL")) +
   theme(legend.position = "right") +
+  theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
-  theme(axis.text.x = element_text(size = 11),
-        axis.text.y = element_text(size = 11))
+  theme(axis.text.x = element_text(colour="black", size = 14),
+        axis.text.y = element_text(colour="black", size = 14)) +
+  guides(
+    color = guide_legend(order = 1),
+    shape = guide_legend(order = 2)) + 
+  theme(legend.position = "none")
 
 centroid_plot_AM2
 
@@ -789,6 +596,40 @@ permanova.host
 # The distance to centroid values for the tree communities are related to some environmental variables, but 
 # simple linear relationships are an over-simplification here. 
 
+########################################################################################
+
+############################################## -- 
+# (4) GATHER SIGNIFICANT RESULTS OF INTEREST  
+############################################## -- 
+
+# Gather up the two PCA plots and organize them for the figure
+
+# Gather PCA plots:
+# PCA_plot_host, PCA_plot_site
+
+PCA_plots <- plot_grid(PCA_plot_site, PCA_plot_host,
+                       ncol = 1, nrow = 2, labels = c('(a)', '(c)'), label_size = 16, 
+                       hjust = -0.2)
+
+PCA_plots
+
+ggsave("~/Dropbox/WSU/Mycorrhizae_Project/Publication_Materials/Figures/AM_tax_PCAs.png", 
+       plot = PCA_plots, width = 5, height = 10, units = "in", dpi = 300)
+
+
+# Gather up the two distance to centroid plots and organize them for the figure
+
+# Gather distance to centroid plots:
+# centroid_plot_AM, centroid_plot_AM2
+
+centroid_plots <- plot_grid(centroid_plot_AM, centroid_plot_AM2,
+                            ncol = 1, nrow = 2, labels = c('(a)', '(c)'), label_size = 16, 
+                            hjust = -0.1)
+
+centroid_plots
+
+ggsave("~/Dropbox/WSU/Mycorrhizae_Project/Publication_Materials/Figures/AM_tax_centroids.png", 
+       plot = centroid_plots, width = 5, height = 10, units = "in", dpi = 300)
 
 ## -- END -- ## 
 
