@@ -145,7 +145,7 @@ PCA_traits_both_AM
 PCA_traits_site_AM <- ggplot(scores.pca_traits_AM, aes(x = PC1, y = PC2, color = Site)) +
   geom_point(size = 3) +
   stat_ellipse(aes(group = Site), type = "norm", linewidth = 1, size = 1) +
-  theme_minimal(base_size = 11) +
+  theme_minimal(base_size = 14) +
   scale_colour_manual(values=palette, 
                       name="Site",
                       breaks=c("Northern", "WFDP", "Andrews", "Southern"),
@@ -153,14 +153,15 @@ PCA_traits_site_AM <- ggplot(scores.pca_traits_AM, aes(x = PC1, y = PC2, color =
   labs(x = paste0("PC1 (", round(pca_var_explained[1], 1), "%)"),
        y = paste0("PC2 (", round(pca_var_explained[2], 1), "%)"), 
        color = "Site") +
+  theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
-  theme(axis.text.x = element_text(size = 11),
-        axis.text.y = element_text(size = 11)) +
+  theme(axis.text.x = element_text(colour="black", size = 14),
+        axis.text.y = element_text(colour="black", size = 14)) +
   guides(
     color = guide_legend(order = 1),
-    shape = guide_legend(order = 2)  
-  )
+    shape = guide_legend(order = 2)) + 
+  theme(legend.position = "none")
 
 PCA_traits_site_AM
 
@@ -168,7 +169,7 @@ PCA_traits_site_AM
 PCA_traits_host_AM <- ggplot(scores.pca_traits_AM, aes(x = PC1, y = PC2, color = Host_ID)) +
   geom_point(size = 3) +
   stat_ellipse(aes(group = Host_ID), type = "norm", linewidth = 1, size = 1) +
-  theme_minimal(base_size = 11) +
+  theme_minimal(base_size = 14) +
   scale_colour_manual(values=AM_hosts, 
                       name="Host Tree Species",
                       breaks=c("ALRU", "TABR", "THPL"),
@@ -176,14 +177,15 @@ PCA_traits_host_AM <- ggplot(scores.pca_traits_AM, aes(x = PC1, y = PC2, color =
   labs(x = paste0("PC1 (", round(pca_var_explained[1], 1), "%)"),
        y = paste0("PC2 (", round(pca_var_explained[2], 1), "%)"), 
        color = "Host Tree Species") +
+  theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
-  theme(axis.text.x = element_text(size = 11),
-        axis.text.y = element_text(size = 11)) +
+  theme(axis.text.x = element_text(colour="black", size = 14),
+        axis.text.y = element_text(colour="black", size = 14)) +
   guides(
     color = guide_legend(order = 1),
-    shape = guide_legend(order = 2)  
-  )
+    shape = guide_legend(order = 2)) + 
+  theme(legend.position = "none")
 
 PCA_traits_host_AM
 
@@ -263,18 +265,22 @@ distances_AM$Site <- factor(distances_AM$Site, levels = site_order)
 centroid_plot_AM <- ggplot(distances_AM, aes(x = Site, y = DistanceToCentroid, fill = Site)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.7) +
   geom_jitter(width = 0.15, size = 1.5, alpha = 0.6) +
-  theme_minimal(base_size = 11) +
-  labs(x = "Site",
+  theme_minimal(base_size = 14) +
+  labs(x = "",
        y = "Distance to Centroid") +
   scale_fill_manual(values=palette, 
                     name="Site",
                     breaks=c("Northern", "WFDP", "Andrews", "Southern"),
                     labels=c("Northern", "WFDP", "Andrews", "Southern")) +
-  theme(legend.position = "right") +
+  theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
-  theme(axis.text.x = element_text(size = 11),
-        axis.text.y = element_text(size = 11))
+  theme(axis.text.x = element_text(colour="black", size = 14),
+        axis.text.y = element_text(colour="black", size = 14)) +
+  guides(
+    color = guide_legend(order = 1),
+    shape = guide_legend(order = 2)) + 
+  theme(legend.position = "none")
 
 centroid_plot_AM
 
@@ -333,18 +339,22 @@ distances_AM2 <- data.frame(
 centroid_plot_AM2 <- ggplot(distances_AM2, aes(x = Host, y = DistanceToCentroid, fill = Host)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.7) +
   geom_jitter(width = 0.15, size = 1.5, alpha = 0.6) +
-  theme_minimal(base_size = 11) +
-  labs(x = "Host",
+  theme_minimal(base_size = 14) +
+  labs(x = "",
        y = "Distance to Centroid") +
   scale_fill_manual(values=AM_hosts, 
                     name="Host",
                     breaks=c("ALRU", "TABR", "THPL"),
                     labels=c("ALRU", "TABR", "THPL")) +
-  theme(legend.position = "right") +
+  theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
-  theme(axis.text.x = element_text(size = 11),
-        axis.text.y = element_text(size = 11))
+  theme(axis.text.x = element_text(colour="black", size = 14),
+        axis.text.y = element_text(colour="black", size = 14)) +
+  guides(
+    color = guide_legend(order = 1),
+    shape = guide_legend(order = 2)) + 
+  theme(legend.position = "none")
 
 centroid_plot_AM2
 
@@ -376,6 +386,44 @@ permanova.both2
 # significant, and 13.5% explained
 
 
+
 ########################################################################################
+
+############################################## -- 
+# (4) GATHER SIGNIFICANT RESULTS OF INTEREST  
+############################################## -- 
+
+# Gather up the two PCA plots and organize them for the figure
+
+# Gather PCA plots:
+# PCA_traits_host_AM, PCA_traits_site_AM
+
+PCA_plots <- plot_grid(PCA_traits_site_AM, PCA_traits_host_AM, 
+                       ncol = 1, nrow = 2, labels = c('(b)', '(d)'), label_size = 16, 
+                       hjust = -0.2)
+
+PCA_plots
+
+ggsave("~/Dropbox/WSU/Mycorrhizae_Project/Publication_Materials/Figures/AM_trait_PCAs.png", 
+       plot = PCA_plots, width = 5, height = 10, units = "in", dpi = 300)
+
+
+
+# Gather up the two distance to centroid plots and organize them for the figure
+
+# Gather distance to centroid plots:
+# centroid_plot_AM, centroid_plot_AM2
+
+centroid_plots <- plot_grid(centroid_plot_AM, centroid_plot_AM2,
+                            ncol = 1, nrow = 2, labels = c('(b)', '(d)'), label_size = 16, 
+                            hjust = -0.1)
+
+centroid_plots
+
+ggsave("~/Dropbox/WSU/Mycorrhizae_Project/Publication_Materials/Figures/AM_trait_centroids.png", 
+       plot = centroid_plots, width = 5, height = 10, units = "in", dpi = 300)
+
+
+## -- END -- ## 
 
 
