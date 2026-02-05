@@ -14,6 +14,7 @@
 #                     phyloseq v 1.48.0
 #                     ape v 5.8.1
 #                     ggh4x v 0.3.1.9000
+#                     stringr v 1.6.0
 # -----------------------------------------------------------------------------#
 
 # PACKAGES, SCRIPTS, AND SETUP ####
@@ -28,6 +29,7 @@ library(ade4); packageVersion("ade4")
 library(phyloseq); packageVersion("phyloseq")
 library(ape); packageVersion("ape")
 library(ggh4x); packageVersion("ggh4x")
+library(stringr); packageVersion("stringr")
 
 #################################################################################
 #                               Main workflow                                   #
@@ -106,6 +108,166 @@ trees_EM_raw <- otu_table(ps_EM_raw) %>% as("matrix") %>% as.data.frame()
 ## 2. DATA ANALYSIS
 # Relative Abundance of Functions 
 ####################
+
+# Want to get a site-level summary first 
+
+# Take trees_EM_raw and sum the raw ASV abundances for each site, rather than each individual tree 
+
+tree_asvs <- rownames_to_column(trees_EM_raw, var = "Tree_ID")
+
+asv_site <- tree_asvs %>%
+  mutate(site = str_extract(Tree_ID, "^[A-Z]"))
+
+# Sum for each site 
+asv_site_sum <- asv_site %>%
+  group_by(site) %>%
+  summarise(across(starts_with("ASV"), \(x) sum(x, na.rm = TRUE)))
+
+# Move site back into rownames before matrix math 
+asv_site_sum <- column_to_rownames(asv_site_sum, var = "site")
+
+
+# check structure 
+str(asv_site_sum)
+str(traits_EM_ET)
+
+# make both numeric matrices
+# Keep rownames
+site_ids <- rownames(asv_site_sum)
+
+# Convert to numeric matrix and add back in the rownames 
+site_matrix_EM <- as.data.frame(asv_site_sum)
+site_matrix_EM[] <- lapply(site_matrix_EM, as.numeric)  
+site_matrix_EM <- as.matrix(site_matrix_EM)
+rownames(site_matrix_EM) <- site_ids 
+
+
+# Keep rownames
+asv_ids <- rownames(traits_EM_ET)
+
+traits_matrix_EM_ET <- as.data.frame(traits_EM_ET)
+traits_matrix_EM_ET[] <- lapply(traits_matrix_EM_ET, as.numeric)
+traits_matrix_EM_ET <- as.matrix(traits_matrix_EM_ET)
+rownames(traits_matrix_EM_ET) <- asv_ids
+
+# check for any NAs in the data 
+sum(is.na(site_matrix_EM)) # None        
+sum(is.na(traits_matrix_EM_ET))  # None   
+
+# Make sure ASVs match between traits and sites
+# Find shared ASVs between the two datasets 
+shared_asvs <- intersect(colnames(site_matrix_EM), rownames(traits_matrix_EM_ET))
+# all are shared
+
+# set the ASVs to be in the same order 
+asv_order <- colnames(site_matrix_EM)
+
+# reorder the trait matrix rows to match the tree matrix columns
+traits_matrix_EM_ET <- traits_matrix_EM_ET[asv_order, ]
+
+# double check alignment 
+all(colnames(site_matrix_EM) == rownames(traits_matrix_EM_ET)) #TRUE
+
+
+# Do math to calculate the abundance of each function 
+
+trait_abund_per_site_ET <- site_matrix_EM %*% traits_matrix_EM_ET
+# Output is a matrix of totals of how much each trait is represented in a site, using raw abundance 
+
+# convert the abundance of each trait for each site into a proportion, which makes it 
+# compatible with aitchison distance that uses compositions 
+trait_prop_per_site_ET <- trait_abund_per_site_ET / rowSums(trait_abund_per_site_ET)
+
+
+# clr transform this dataset to get the CLR transformed abundance for each trait and site 
+# Using the same clr and the same pseudocount as the taxonomic analyses 
+trait_clr_per_site_ET <- decostand(trait_prop_per_site_ET, method = "clr", pseudocount = 1e-06)
+
+
+## Save file of CLR abundance for each trait per site 
+write.csv(trait_clr_per_site_ET, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_trait_clr_per_site.csv")
+
+
+# Get dataframe for plotting 
+trait_clr_per_site_df <- as.data.frame(trait_clr_per_site_ET)
+trait_clr_per_site_df$Site <- rownames(trait_clr_per_site_df)
+
+
+# Reshape to long format
+trait_clr_per_site_df <- trait_clr_per_site_df %>%
+  pivot_longer(-Site, names_to = "Trait", values_to = "CLR_Abund")
+
+# Code site as a factor 
+trait_clr_per_site_df$Site <- as.factor(trait_clr_per_site_df$Site)
+
+# Join table of tree environmental data 
+sample_data <- sample_data(ps_EM_raw) %>% as("matrix") %>% as.data.frame()
+
+sample_data <- sample_data %>% rownames_to_column(var = "Sample_code")
+
+
+# Rename sites to match the sample_data format 
+trait_clr_per_site_df <- trait_clr_per_site_df %>%
+  mutate(Site = dplyr::recode(Site, A = "Andrews", N = "Northern", S = "Southern", W = "WFDP"))
+
+
+## Plotting
+
+# Clean up the trait names 
+trait_clr_per_site_df <- trait_clr_per_site_df %>%
+  mutate(Trait_clean = Trait %>%
+           str_remove("^ET_") %>%                # remove prefix
+           str_replace_all("_", "-") %>%         # underscores → dashes
+           str_to_title()                        # capitalize each word
+  )
+
+# Set exploration type order to reflect range of short to long distance investment 
+exploration_order <- c("Contact", "Contact-Short", "Short", "Contact-Medium", "Contact-Medium-Smooth",
+                       "Contact-Medium-Fringe", "Contact-Long-Smooth", "Medium-Smooth", "Medium-Fringe", 
+                       "Medium-Mat", "Medium-Long", "Medium-Long-Smooth", "Medium-Long-Fringe", "Long")
+
+
+# apply order to the trait column 
+trait_clr_per_site_df <- trait_clr_per_site_df %>%
+  mutate(Trait_clean = factor(Trait_clean, levels = exploration_order))
+
+# get viridis colors for the traits 
+library(viridis)
+
+viridis_colors <- viridis(14, option = "D", direction = -1)
+print(viridis_colors)
+
+# Set site order 
+site_order <- c("Northern", "WFDP", "Andrews", "Southern")
+
+trait_clr_per_site_df$Site <- factor(trait_clr_per_site_df$Site, levels = site_order)
+
+# Stacked bar plot for trait representation across sites - using the non-scaled values because I want 
+# to make comparisons between sites 
+
+ET_sites <- ggplot(trait_clr_per_site_df, aes(x = Site, y = CLR_Abund, fill = Trait_clean)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(
+    values = setNames(viridis(14, option = "D", direction = -1), exploration_order)) +
+  theme_minimal(base_size = 12) +
+  labs(
+    x = "",
+    y = "Relative Over- and Under-Representation of Exploration Types",
+    fill = "Exploration Type") +
+  geom_hline(yintercept = 0, color = "red", linewidth = 1) +
+  theme(
+    axis.text.x = element_text(size = 12, colour="black"),
+    axis.text.y = element_text(size = 12, colour="black"),
+    axis.title.y = element_text(size = 12, colour="black"),
+    legend.text = element_text(size = 12, colour="black"),
+    strip.text = element_text(size = 12, colour="black")) +
+  theme(legend.title = element_text(colour="black", size=12, face="bold"), 
+        legend.position = "right")
+
+ET_sites
+
+
+###################################### -- 
 
 ## Want to use the raw ASV abundances first, then do clr transformation of the traits after they have been 
 # aggregated across the ASVs
@@ -271,92 +433,13 @@ trait_sums_long_hydro <- trait_sums_long_hydro %>%
   left_join(sample_data, by = "Sample_code")
 
 
-### SKIP: ORIGINAL VERSION WITH CLR-WEIGHTED RELATIVE ABUNDANCE #### 
-
-
-# I want to look at the traits for each tree community and compare the relative portions of traits that 
-# are present using the clr values. 
-
-# check structure 
-str(trees_EM_clr)
-str(traits_EM)
-
-# make both numeric matrices
-# Keep rownames
-tree_ids <- rownames(trees_EM_clr)
-
-# Convert to numeric matrix and add back in the rownames 
-tree_matrix_EM <- as.data.frame(trees_EM_clr)
-tree_matrix_EM[] <- lapply(tree_matrix_EM, as.numeric)  
-tree_matrix_EM <- as.matrix(tree_matrix_EM)
-rownames(tree_matrix_EM) <- tree_ids 
-
-
-# Keep rownames
-asv_ids <- rownames(traits_EM)
-
-traits_matrix_EM <- as.data.frame(traits_EM)
-traits_matrix_EM[] <- lapply(traits_matrix_EM, as.numeric)
-traits_matrix_EM <- as.matrix(traits_matrix_EM)
-rownames(traits_matrix_EM) <- asv_ids
-
-# check for any NAs in the data 
-sum(is.na(tree_matrix_EM)) # None        
-sum(is.na(traits_matrix_EM))  # None   
-
-# Make sure ASVs match between traits and trees
-# Find shared ASVs between the two datasets 
-shared_asvs <- intersect(colnames(tree_matrix_EM), rownames(traits_matrix_EM))
-# all are shared
-
-# set the ASVs to be in the same order 
-asv_order <- colnames(tree_matrix_EM)
-
-# reorder the trait matrix rows to match the tree matrix columns
-traits_matrix_EM <- traits_matrix_EM[asv_order, ]
-
-# double check alignment 
-all(colnames(tree_matrix_EM) == rownames(traits_matrix_EM)) #TRUE
-
-# All match, good to go here 
-
-############ -- 
-
-# CLR-weighted trait composition: trees × traits
-trait_sums_per_tree <- tree_matrix_EM %*% traits_matrix_EM
-# Output is a matrix of CLR-weighted totals of how much each trait is represented in a particular
-# tree’s fungal community.
-
-
-# Get dataframe for plotting 
-trait_sums_df <- as.data.frame(trait_sums_per_tree)
-trait_sums_df$Sample_code <- rownames(trait_sums_df)
-
-
-# Reshape to long format
-trait_sums_long <- trait_sums_df %>%
-  pivot_longer(-Sample_code, names_to = "Trait", values_to = "CLR_Sum")
-
-
-# Join table of tree environmental data 
-sample_data <- sample_data(ps_EM_clr) %>% as("matrix") %>% as.data.frame()
-
-sample_data <- sample_data %>% rownames_to_column(var = "Sample_code")
-
-trait_sums_long <- trait_sums_long %>%
-  left_join(sample_data, by = "Sample_code")
-
-
-#################
-
-
 # This is now using the new method for calculating the clr abundance of each trait in each 
 # host tree community 
 
 
 # Can now explore the clr-weighted trait profiles of each host tree! 
 
-# Reformat names in the exploraiton type and hydrophobicity datasets to make them a bit nicer 
+# Reformat names in the exploration type and hydrophobicity datasets to make them a bit nicer 
 
 # Clean up the trait names 
 trait_sums_long_ET <- trait_sums_long_ET %>%
