@@ -10,8 +10,11 @@
 #                     vegan v 2.6.10
 #                     adespatial v 0.3.24
 #                     BiodiversityR v 2.17.1.1
+#                     ggord v 1.1.8
+#                     ggordiplots v 0.4.3
 #                     ggvegan v 0.1.999
 #                     plotly v 4.10.4
+#                     ggrepel v 0.9.7
 #
 # -----------------------------------------------------------------------------#
 
@@ -21,8 +24,11 @@ library(phyloseq); packageVersion("phyloseq")
 library(vegan); packageVersion("vegan")
 library(adespatial); packageVersion("adespatial")
 library(BiodiversityR); packageVersion("BiodiversityR")
+library(ggord); packageVersion("ggord")
+library(ggordiplots); packageVersion("ggordiplots")
 library(ggvegan); packageVersion("ggvegan")
 library(plotly); packageVersion("plotly")
+library(ggrepel); packageVersion("ggrepel")
 
 #################################################################################
 #                               Main workflow                                   #
@@ -90,7 +96,7 @@ print(high_cor_df)
 env <- rownames_to_column(env, "Tree")
 
 env_sub <- dplyr::select(env, Tree, lat, elev, mean_precip_mm, mean_summer_precip_mm, MAT, pct_N, 
-                         K, Fe, ph, Sand, EC, avg_July_SPEI, count_mod_dry)
+                         ph, Sand, avg_July_SPEI, count_mod_dry)
 
 env_sub <- column_to_rownames(env_sub, "Tree")
 
@@ -116,7 +122,7 @@ env_scaled <- as.data.frame(scale(env_sub))
 # homogenous or heterogenous the data are 
 # This tells us if we can use a constrained method like RDA
 
-decorana(aitchison_EM_traits) #length of DCA1 is 0.629
+decorana(aitchison_EM_traits) #length of DCA1 is 0.529
 
 # Doing forward selection
 
@@ -145,7 +151,12 @@ step_result
 step_result$anova
 
 
-# mean_precip_mm + Sand + MAT + ph + count_mod_dry + pct_N
+# pct_N + mean_precip_mm + lat + elev + MAT + Sand + ph + count_mod_dry
+
+
+# Save model if needed again 
+saveRDS(step_result, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_func_step_model.csv")
+
 
 # take env_scaled and merge host_ID to be able to model both 
 hosts <- dplyr::select(env2, Host_ID)
@@ -156,8 +167,9 @@ mod_data <- merge(hosts, env_scaled, by = "row.names")
 
 #performing the dbRDA
 
-#using just the 8 variables selected with forward selection plus host_ID
-EM_RDA <- capscale(formula = aitchison_EM_traits ~ Host_ID + mean_precip_mm + Sand + MAT + ph + count_mod_dry + pct_N, 
+#using just the 9 variables selected with forward selection plus host_ID
+EM_RDA <- capscale(formula = aitchison_EM_traits ~ Host_ID + pct_N + mean_precip_mm + lat + elev + MAT +
+                     Sand + ph + count_mod_dry, 
                    mod_data, distance = "euclidean", sqrt.dist = FALSE,
                    comm = NULL, add = FALSE, metaMDSdist = FALSE)
 
@@ -176,7 +188,7 @@ adjusted_p <- p.adjust(raw_p, method = "bonferroni")
 anova_results$Adjusted_P <- adjusted_p
 print(anova_results)
 
-# count_mod_dry (0.007) and pct_N (0.014) still significant after p-value adjustment, host ID was not. 
+# Host_ID (0.009), pct_N (0.009),and count_mod_dry (0.009) still significant after p-value adjustment
 
 summary(EM_RDA)
 
@@ -185,20 +197,20 @@ screeplot(EM_RDA)
 EM_RDA
 
 # Inertia Proportion Rank
-# Total         20.50453    1.00000     
-# Constrained    1.90360    0.09284   12
-# Unconstrained 18.60093    0.90716   13
+# Total         140.5839     1.0000     
+# Constrained    19.4302     0.1382   13
+# Unconstrained 121.1538     0.8618   13
 
-# 9.3% of the variance is explained by the environmental variables and host 
+# 13.8% of the variance is explained by the environmental variables and host 
 # Inertia = total variation in the data 
 
-#                        CAP1   CAP2    
-# Eigenvalue            1.1848 0.3386 
-# Proportion Explained  0.6224 0.1779 
-# Cumulative Proportion 0.6224 0.8003
+#                        CAP1   CAP2   
+# Eigenvalue            6.3390 5.2783 
+# Proportion Explained  0.3262 0.2717 
+# Cumulative Proportion 0.3262 0.5979 
 
 
-#First axis explained 62.2% of the variation explained by the overall model (9.3%)
+#First axis explained 32.6% of the variation explained by the overall model (13.8%)
 
 
 plot(EM_RDA)
@@ -221,7 +233,8 @@ env_df$Variable <- gsub("Host_ID", "", env_df$Variable)
 
 # Add a column that specifies the type of enviro data so I can change the font color for the 
 # enviornmental variables vs the host species 
-env_df$Type <- c("Host", "Host", "Host", "Host", "Host", "Host", "Enviro", "Enviro", "Enviro", "Enviro", "Enviro", "Enviro")
+env_df$Type <- c("Host", "Host", "Host", "Host", "Host", "Host", "Enviro", "Enviro", "Enviro", "Enviro", 
+                 "Enviro", "Enviro", "Enviro", "Enviro")
 
 env_df$Type <- as.factor(env_df$Type)
 
@@ -241,17 +254,35 @@ all_hosts <- c("#0D0887FF", "#5402A3FF", "#8B0AA5FF", "#B93289FF", "#DB5C68FF", 
 sites <- c(15,16,17,18)
 
 
+# Change vector names to something cleaner 
+env_df$Variable <- c("ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE", "Pct_N", "MAP", "Lat", "Elev", 
+                     "MAT", "Sand", "pH", "Mod_Dry")
+
+
+# Keep only significant factors, so remove all but pct_N and count_mod_dry
+env_df$Variable <- as.factor(env_df$Variable)
+
+env_df_filt <- env_df %>%
+  filter(Variable != "MAP") %>%
+  filter(Variable != "Lat") %>%
+  filter(Variable != "Elev") %>%
+  filter(Variable != "MAT") %>%
+  filter(Variable != "Sand") %>%
+  filter(Variable != "pH") %>%
+  droplevels()
+
+
 p <- ggplot() +
   # Site points
-  geom_point(data = site_df, aes(x = CAP1, y = CAP2, color = Host_ID, shape = Site), size = 2, alpha = 0.7) +
+  geom_point(data = site_df, aes(x = CAP1, y = CAP2, color = Host_ID, shape = Site), size = 2.5, alpha = 0.7) +
   # Arrows for environmental vectors
-  geom_segment(data = env_df,
-               aes(x = 0, y = 0, xend = CAP1 * 10, yend = CAP2 * 10),
+  geom_segment(data = env_df_filt,
+               aes(x = 0, y = 0, xend = CAP1 * 6, yend = CAP2 * 6),
                arrow = arrow(length = unit(0.2, "cm")), color = "black") +
   # Text labels for environmental variables
-  geom_text_repel(data = env_df,
-                  aes(x = CAP1 * 10, y = CAP2 * 10, label = Variable, fontface = "bold"),
-                  size = 4, color = "black") +
+  ggrepel::geom_text_repel(data = env_df_filt,
+                  aes(x = CAP1 * 6.5, y = CAP2 * 6.5, label = Variable, fontface = "bold"),
+                  size = 4.5, color = "black") +
   scale_shape_manual(values=sites,
                      name="Site",
                      breaks=c("Northern", "WFDP", "Andrews", "Southern"),
@@ -261,16 +292,33 @@ p <- ggplot() +
                       breaks=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE"),
                       labels=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE")) +
   theme_bw() +
-  labs(x = "CAP1 (62.24%)", # Remember to update to new values! 
-       y = "CAP2 (17.79%)", # Remember to update to new values! 
+  labs(x = "CAP1 (32.62%)", # Remember to update to new values! 
+       y = "CAP2 (27.17%)", # Remember to update to new values! 
        color = "Site") +
   coord_cartesian()  +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
-  theme(axis.text.x = element_text(colour="black", size = 11),
-        axis.text.y = element_text(colour="black", size = 11))
+  theme(axis.text.x = element_text(colour="black", size = 14),
+        axis.text.y = element_text(colour="black", size = 14), 
+        axis.title.x = element_text(colour="black", size = 14), 
+        axis.title.y = element_text(colour="black", size = 14)) +
+  theme(legend.position = "none") # remove legend position for now for saving plot
 
 p
+
+
+############
+
+# INTERPRETATION
+
+# This is explaining 13.8% of the variation
+
+############
+
+
+# Save final plot 
+ggsave("~/Dropbox/WSU/Mycorrhizae_Project/Publication_Materials/Figures/EM_func_dbrda.png", 
+       plot = p, width = 4.5, height = 5, units = "in", dpi = 300)
 
 
 ## -- END -- ## 

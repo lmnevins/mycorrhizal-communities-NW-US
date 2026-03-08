@@ -136,6 +136,11 @@ step_result$anova
 
 # only avg_July_SPEI was significant 
 
+
+# Save model if needed again 
+saveRDS(step_result, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_func_step_model.csv")
+
+
 # take env_scaled and merge host_ID to be able to model both 
 hosts <- dplyr::select(env2, Host_ID)
 
@@ -235,18 +240,29 @@ AM_hosts <- c("#B93289FF", "#F48849FF", "#ffe24cFF")
 
 sites <- c(15,16,17,18)
 
+# Change vector names to something cleaner 
+env_df$Variable <- c("TABR", "THPL", "SPEI")
+
+
+# Remove SPEI to retain only significant factors 
+env_df$Variable <- as.factor(env_df$Variable)
+
+env_df_filt <- env_df %>%
+  filter(Variable != "SPEI") %>%
+  droplevels()
+
 
 q <- ggplot() +
   # Site points
-  geom_point(data = site_df, aes(x = CAP1, y = CAP2, color = Host_ID, shape = Site), size = 2, alpha = 0.7) +
+  geom_point(data = site_df, aes(x = CAP1, y = CAP2, color = Host_ID, shape = Site), size = 2.5, alpha = 0.7) +
   # Arrows for environmental vectors
-  geom_segment(data = env_df,
-               aes(x = 0, y = 0, xend = CAP1 * 5, yend = CAP2 * 5),
+  geom_segment(data = env_df_filt,
+               aes(x = 0, y = 0, xend = CAP1 * 6, yend = CAP2 * 6),
                arrow = arrow(length = unit(0.2, "cm")), color = "black") +
   # Text labels for environmental variables
-  geom_text_repel(data = env_df,
-                  aes(x = CAP1 * 5, y = CAP2 * 5, label = Variable, fontface = "bold"),
-                  size = 4, color = "black") +
+  geom_text_repel(data = env_df_filt,
+                  aes(x = CAP1 * 7, y = CAP2 * 7, label = Variable, fontface = "bold"),
+                  size = 4.5, color = "black") +
   scale_shape_manual(values=sites,
                      name="Site",
                      breaks=c("Northern", "WFDP", "Andrews", "Southern"),
@@ -262,8 +278,11 @@ q <- ggplot() +
   coord_cartesian()  +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
-  theme(axis.text.x = element_text(colour="black", size = 11),
-        axis.text.y = element_text(colour="black", size = 11))
+  theme(axis.text.x = element_text(colour="black", size = 14),
+        axis.text.y = element_text(colour="black", size = 14), 
+        axis.title.x = element_text(colour="black", size = 14), 
+        axis.title.y = element_text(colour="black", size = 14)) +
+  theme(legend.position = "none") # remove legend position for now for saving plot
 
 q
 
@@ -273,8 +292,16 @@ q
 
 # INTERPRETATION
 
-# This is explaining 45% of the variation and the environmental variables that are significant are 
-# different from the taxonomic results. BUT, the shape of the ordination is nearly vertical, 
-# which suggests that there are some issues with the data. 
+# This is explaining 11.7% of the variation and the environmental variables that are significant are 
+# different from the taxonomic results.
 
+############
+
+
+# Save final plot 
+ggsave("~/Dropbox/WSU/Mycorrhizae_Project/Publication_Materials/Figures/AM_func_dbrda.png", 
+       plot = q, width = 4.5, height = 5, units = "in", dpi = 300)
+
+
+## -- END -- ## 
 

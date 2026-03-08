@@ -154,7 +154,12 @@ step_result
 step_result$anova
 
 
-# ph + elev + Sand + avg_July_SPEI significant 
+# ph + elev + apr1_SWE, Sand significant 
+
+
+# Save model if needed again 
+saveRDS(step_result, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_tax_step_model.csv")
+
 
 # take env_scaled and merge host_ID to be able to model both 
 hosts <- dplyr::select(env2, Host_ID)
@@ -166,7 +171,7 @@ mod_data <- merge(hosts, env_scaled, by = "row.names")
 #performing the dbRDA
 
 #using just the 2 variables selected with forward selection 
-AM_RDA <- capscale(formula = aitchison_AM ~ Host_ID + ph + elev + Sand + avg_July_SPEI,
+AM_RDA <- capscale(formula = aitchison_AM ~ Host_ID + ph + elev + apr1_SWE + Sand,
                    mod_data, distance = "euclidean", sqrt.dist = FALSE,
                    comm = NULL, add = FALSE, metaMDSdist = FALSE)
 
@@ -185,7 +190,7 @@ adjusted_p <- p.adjust(raw_p, method = "bonferroni")
 anova_results$Adjusted_P <- adjusted_p
 print(anova_results)
 
-# Host (0.005), pH (0.005), elev (0.010), Sand (0.025) and avg_July_SPEI (0.010) significant 
+# Host (0.005), pH (0.015), elev (0.045), apr1_SWE (0.015), and Sand (0.02) significant 
 
 summary(AM_RDA)
 
@@ -255,17 +260,21 @@ AM_hosts <- c("#B93289FF", "#F48849FF", "#ffe24cFF")
 sites <- c(15,16,17,18)
 
 
+# Change vector names to something cleaner 
+env_df$Variable <- c("TABR", "THPL", "pH", "Elev", "SWE", "Sand")
+
+
 q <- ggplot() +
   # Site points
-  geom_point(data = site_df, aes(x = CAP1, y = CAP2, color = Host_ID, shape = Site), size = 2, alpha = 0.7) +
+  geom_point(data = site_df, aes(x = CAP1, y = CAP2, color = Host_ID, shape = Site), size = 2.5, alpha = 0.7) +
   # Arrows for environmental vectors
   geom_segment(data = env_df,
-               aes(x = 0, y = 0, xend = CAP1 * 5, yend = CAP2 * 5),
+               aes(x = 0, y = 0, xend = CAP1 * 6, yend = CAP2 * 6),
                arrow = arrow(length = unit(0.2, "cm")), color = "black") +
   # Text labels for environmental variables
   geom_text_repel(data = env_df,
-                  aes(x = CAP1 * 5, y = CAP2 * 5, label = Variable, fontface = "bold"),
-                  size = 4, color = "black") +
+                  aes(x = CAP1 * 6.5, y = CAP2 * 6.5, label = Variable, fontface = "bold"),
+                  size = 4.5, color = "black") +
   scale_shape_manual(values=sites,
                      name="Site",
                      breaks=c("Northern", "WFDP", "Andrews", "Southern"),
@@ -275,17 +284,19 @@ q <- ggplot() +
                       breaks=c("ALRU", "TABR", "THPL"),
                       labels=c("ALRU", "TABR", "THPL")) +
   theme_bw() +
-  labs(x = "CAP1 (38.34%)",
-       y = "CAP2 (28.15%)",
+  labs(x = "CAP1 (38.23%)",
+       y = "CAP2 (28.74%)",
        color = "Site") +
   coord_cartesian()  +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
-  theme(axis.text.x = element_text(colour="black", size = 11),
-        axis.text.y = element_text(colour="black", size = 11))
+  theme(axis.text.x = element_text(colour="black", size = 14),
+        axis.text.y = element_text(colour="black", size = 14), 
+        axis.title.x = element_text(colour="black", size = 14), 
+        axis.title.y = element_text(colour="black", size = 14)) +
+  theme(legend.position = "none") # remove legend position for now for saving plot
 
 q
-
 
 
 ############
@@ -294,4 +305,12 @@ q
 
 # This is explaining 16.6% of the variation
 
+############
 
+
+# Save final plot 
+ggsave("~/Dropbox/WSU/Mycorrhizae_Project/Publication_Materials/Figures/AM_tax_dbrda.png", 
+       plot = q, width = 4.5, height = 5, units = "in", dpi = 300)
+
+
+## -- END -- ## 
