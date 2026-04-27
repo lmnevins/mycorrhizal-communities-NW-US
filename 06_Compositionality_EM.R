@@ -43,6 +43,17 @@ library(lme4); packageVersion("lme4")
 #                                                                               #
 #################################################################################
 
+## If just running analyses, skip to STEP 2 
+
+#################################################################################
+
+################ --
+# (1) DATA PREP
+################ --
+
+## GOAL: Create cleaned and transformed phyloseq object for all downstream analyses 
+
+
 # Load phyloseq object produced from the subset of the funguild community 
 ps_EM <- readRDS("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_phyloseq_final_2025.RDS")
 
@@ -207,6 +218,7 @@ otu.rarecurve = rarecurve(otu.rare, step = 10000, label = F)
 
 #### 
 
+
 # Pursuing a transformation because sequence data are inherently compositional, but standard rarefaction 
 # is not repeatable and leads to the exclusion of a huge fraction of your data 
 
@@ -234,7 +246,24 @@ saveRDS(ps_EM_clr, file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/
 ## This is the phyloseq object to be used in all downstream analyses 
 #####################
 
-#####################Beta-diversity##########################################
+#################################################################################
+
+## SKIP TO HERE ## 
+
+######################################## --
+# (2) ANALYSES OF COMMUNITY COMPOSITION
+######################################## --
+
+## GOAL: Analyze the taxonomic composition of the EM communities.  
+
+
+# Load in ps_EM_clr dataframe 
+ps_EM_clr <- readRDS("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_phyloseq_transformed_final_no_THPL.RDS")
+
+
+# Pull out otu table to generate 'clr_EM' dataframe 
+clr_EM <- otu_table(ps_EM_clr) %>% as.matrix() %>% as.data.frame()
+
 
 ## Beta-diversity can be calculated using Aitchison Distance, which is essentially the euclidean
 # distance calculated between pairs of samples that have been transformed by CLR
@@ -291,6 +320,18 @@ all_hosts <- c("#0D0887FF", "#5402A3FF", "#8B0AA5FF", "#B93289FF", "#DB5C68FF", 
 
 sites <- c(15,16,17,18)
 
+
+# Shapes for all hosts 
+
+# ABAM, ABGR, ABPR, ALRU, PSME, TABR, THPL, TSHE  
+host_shapes <- c(15, 16, 17, 18, 7, 8, 9, 12)
+
+
+# For just EM hosts 
+EM_host_shapes <- c(15, 16, 17, 18, 7, 8, 12)
+
+
+
 # Plot the Results by site and host 
 PCA_plot_both <- ggplot(scores.pca_clr_EM, aes(x = PC1, y = PC2, color = Host_ID, shape = Site )) +
   geom_point(size = 3) +
@@ -340,7 +381,7 @@ PCA_plot_site <- ggplot(scores.pca_clr_EM, aes(x = PC1, y = PC2, color = Site)) 
 PCA_plot_site
 
 # Plot the Results by host alone
-PCA_plot_host <- ggplot(scores.pca_clr_EM, aes(x = PC1, y = PC2, color = Host_ID)) +
+PCA_plot_host <- ggplot(scores.pca_clr_EM, aes(x = PC1, y = PC2, color = Host_ID, shape = Host_ID)) +
   geom_point(size = 3) +
   stat_ellipse(aes(group = Host_ID), type = "norm", linewidth = 1, size = 1) +
   theme_minimal(base_size = 14) +
@@ -348,18 +389,20 @@ PCA_plot_host <- ggplot(scores.pca_clr_EM, aes(x = PC1, y = PC2, color = Host_ID
                       name="Host Tree Species",
                       breaks=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE"),
                       labels=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE")) +
+  scale_shape_manual(values=EM_host_shapes, 
+                     name="Host Tree Species",
+                     breaks=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE"),
+                     labels=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE")) +
   labs(x = paste0("PC1 (", round(pca_var_explained[1], 1), "%)"),
        y = paste0("PC2 (", round(pca_var_explained[2], 1), "%)"), 
-       color = "Host Tree Species") +
+       color = "Host Tree Species", shape = "Host Tree Species") +
   theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
   theme(axis.text.x = element_text(colour="black", size = 14),
         axis.text.y = element_text(colour="black", size = 14)) +
-  guides(
-    color = guide_legend(order = 1),
-    shape = guide_legend(order = 2)) + 
   theme(legend.position = "none")
+
 
 PCA_plot_host
 

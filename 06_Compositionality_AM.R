@@ -323,7 +323,19 @@ palette <- c("#580E70", "#47E5BB", "#F8BD4B", "#9D072C")
 # For just AM hosts 
 AM_hosts <- c("#B93289FF", "#F48849FF", "#ffe24cFF")
 
+# Shapes for sites
 sites <- c(15,16,17,18)
+
+
+# Shapes for all hosts 
+
+          # ABAM, ABGR, ABPR, ALRU, PSME, TABR, THPL, TSHE  
+host_shapes <- c(15, 16, 17, 18, 7, 8, 9, 12)
+
+
+# For just AM hosts 
+AM_host_shapes <- c(18, 8, 9)
+
 
 # Plot the Results by site and host 
 PCA_plot_both <- ggplot(scores.pca_clr_AM, aes(x = PC1, y = PC2, color = Host_ID, shape = Site)) +
@@ -382,7 +394,7 @@ PCA_plot_site
 #### -- 
 
 # Plot the Results by host alone
-PCA_plot_host <- ggplot(scores.pca_clr_AM, aes(x = PC1, y = PC2, color = Host_ID)) +
+PCA_plot_host <- ggplot(scores.pca_clr_AM, aes(x = PC1, y = PC2, color = Host_ID, shape = Host_ID)) +
   geom_point(size = 3) +
   stat_ellipse(aes(group = Host_ID), type = "norm", linewidth = 1, size = 1) +
   theme_minimal(base_size = 14) +
@@ -390,17 +402,18 @@ PCA_plot_host <- ggplot(scores.pca_clr_AM, aes(x = PC1, y = PC2, color = Host_ID
                       name="Host Tree Species",
                       breaks=c("ALRU", "TABR", "THPL"),
                       labels=c("ALRU", "TABR", "THPL")) +
+  scale_shape_manual(values=AM_host_shapes, 
+                     name="Host Tree Species",
+                     breaks=c("ALRU", "TABR", "THPL"),
+                     labels=c("ALRU", "TABR", "THPL")) +
   labs(x = paste0("PC1 (", round(pca_var_explained[1], 1), "%)"),
        y = paste0("PC2 (", round(pca_var_explained[2], 1), "%)"), 
-       color = "Host Tree Species") +
+       color = "Host Tree Species", shape = "Host Tree Species") +
   theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
   theme(axis.text.x = element_text(colour="black", size = 14),
         axis.text.y = element_text(colour="black", size = 14)) +
-  guides(
-    color = guide_legend(order = 1),
-    shape = guide_legend(order = 2)) + 
   theme(legend.position = "none")
 
 PCA_plot_host
