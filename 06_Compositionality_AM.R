@@ -269,9 +269,14 @@ saveRDS(ps_AM_clr, file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/
 # Load in ps_AM_clr dataframe 
 ps_AM_clr <- readRDS("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_phyloseq_transformed_final.RDS")
 
-
 # Pull out otu table to generate 'clr_AM' dataframe 
 clr_AM <- otu_table(ps_AM_clr) %>% as.matrix() %>% as.data.frame()
+
+
+# Load in sample data for the communities 
+sample_metadata <- read.csv("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_enviro_all_2025.csv")
+
+sample_metadata <- column_to_rownames(sample_metadata, "X")
 
 
 ## Beta-diversity can be calculated using Aitchison Distance, which is essentially the euclidian
@@ -393,28 +398,44 @@ PCA_plot_site
 
 #### -- 
 
+
+
+# make dataframe of full species names 
+sci_name <- c("A. rubra", "T. brevifolia", "T. plicata")
+
+Host_ID <- c("ALRU", "TABR", "THPL")
+
+
+taxa <- data.frame(sci_name, Host_ID)
+
+# Merge to all of the files
+
+scores.pca_clr_AM <- merge(scores.pca_clr_AM, taxa, by = "Host_ID")
+
+
+
 # Plot the Results by host alone
-PCA_plot_host <- ggplot(scores.pca_clr_AM, aes(x = PC1, y = PC2, color = Host_ID, shape = Host_ID)) +
+PCA_plot_host <- ggplot(scores.pca_clr_AM, aes(x = PC1, y = PC2, color = sci_name, shape = sci_name)) +
   geom_point(size = 3) +
   stat_ellipse(aes(group = Host_ID), type = "norm", linewidth = 1, size = 1) +
   theme_minimal(base_size = 14) +
   scale_colour_manual(values=AM_hosts, 
                       name="Host Tree Species",
-                      breaks=c("ALRU", "TABR", "THPL"),
-                      labels=c("ALRU", "TABR", "THPL")) +
+                      breaks=c("A. rubra", "T. brevifolia", "T. plicata"),
+                      labels=c("A. rubra", "T. brevifolia", "T. plicata")) +
   scale_shape_manual(values=AM_host_shapes, 
                      name="Host Tree Species",
-                     breaks=c("ALRU", "TABR", "THPL"),
-                     labels=c("ALRU", "TABR", "THPL")) +
+                     breaks=c("A. rubra", "T. brevifolia", "T. plicata"),
+                     labels=c("A. rubra", "T. brevifolia", "T. plicata")) +
   labs(x = paste0("PC1 (", round(pca_var_explained[1], 1), "%)"),
        y = paste0("PC2 (", round(pca_var_explained[2], 1), "%)"), 
        color = "Host Tree Species", shape = "Host Tree Species") +
   theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
-  theme(legend.text = element_text(colour="black", size = 12)) +
+  theme(legend.text = element_text(colour="black", size = 12, face = "italic")) +
   theme(axis.text.x = element_text(colour="black", size = 14),
         axis.text.y = element_text(colour="black", size = 14)) +
-  theme(legend.position = "none")
+  theme(legend.position = "right")
 
 PCA_plot_host
 
@@ -434,7 +455,13 @@ betadisper.site
 
 # This is permutational, so it will give a different p-value each time 
 permutest(betadisper.site)
-#groups dispersions are different (not homogenous) p = 0.003
+
+# Response: Distances
+# Df Sum Sq Mean Sq      F N.Perm Pr(>F)   
+# Groups      3  12673  4224.3 6.0071    999  0.002 **
+#   Residuals 126  88606   703.2       
+
+#groups dispersions are different (not homogenous) p = 0.002
 
 #if the dispersion is different between groups, then examine
 scores(betadisper.site, display = c("sites", "centroids"),
@@ -459,16 +486,18 @@ plot(mod.HSD)
 # 
 # $group
 #                        diff        lwr       upr     p adj
-# Northern-Andrews   -8.495812 -24.354237  7.362613 0.5049208
-# Southern-Andrews    2.174041 -14.979765 19.327847 0.9875469
-# WFDP-Andrews      -21.897533 -38.668678 -5.126388 0.0049518
-# Southern-Northern  10.669853  -7.238962 28.578668 0.4103049
-# WFDP-Northern     -13.401721 -30.944352  4.140910 0.1975852
-# WFDP-Southern     -24.071574 -42.793415 -5.349733 0.0058530
+# Northern-Andrews  -19.770900 -35.699247 -3.842552 0.0084371 **
+# Southern-Andrews    1.198183 -16.031257 18.427623 0.9978820
+# WFDP-Andrews      -18.678426 -35.523518 -1.833334 0.0234093 *
+# Southern-Northern  20.969083   2.981304 38.956861 0.0152899 *
+# WFDP-Northern       1.092474 -16.527506 18.712453 0.9984951
+# WFDP-Southern     -19.876609 -38.680998 -1.072220 0.0339116 *
 
 # differences between 
-# WFDP-Andrews = 0.005 *
-# WFDP-Southern = 0.006 * 
+# Northern-Andrews = 0.008
+# WFDP-Andrews = 0.023 *
+# Southern-Northern = 0.015 * 
+# WFDP-Southern = 0.034 * 
 
 
 # Nicer boxplot 
@@ -501,13 +530,13 @@ centroid_plot_AM <- ggplot(distances_AM, aes(x = Site, y = DistanceToCentroid, f
   guides(
     color = guide_legend(order = 1),
     shape = guide_legend(order = 2)) + 
-  theme(legend.position = "none")
+  theme(legend.position = "right")
 
 centroid_plot_AM
 
 
 
-permanova.site <- vegan::adonis2(aitchison_AM ~ Site, data = sample_metadata, method = "euclidean", permutations = 999)
+ﬁpermanova.site <- vegan::adonis2(aitchison_AM ~ Site, data = sample_metadata, method = "euclidean", permutations = 999)
 permanova.site
 
 # vegan::adonis2(formula = aitchison_AM ~ Site, data = sample_metadata, permutations = 999, method = "euclidean")
@@ -536,13 +565,34 @@ permanova.both2
 
 ##############
 
+
+# make dataframe of full species names 
+sci_name <- c("A. rubra", "T. brevifolia", "T. plicata")
+
+Host_ID <- c("ALRU", "TABR", "THPL")
+
+
+taxa <- data.frame(sci_name, Host_ID)
+
+# Merge to all of the files
+
+sample_metadata <- merge(sample_metadata, taxa, by = "Host_ID")
+
+
+
 #check betadispersion between host tree taxa 
 betadisper.host <- betadisper(aitchison_AM, sample_metadata$Host_ID, type = "median", sqrt.dist = FALSE)
 
 betadisper.host
 
 permutest(betadisper.host)
-#groups are different p = 0.001
+
+# Response: Distances
+# Df Sum Sq Mean Sq      F N.Perm Pr(>F)
+# Groups      2   2553 1276.30 1.6186    999  0.191
+# Residuals 127 100144  788.53   
+
+#groups are not different p = 0.191
 
 #if the dispersion is different between groups, then examine
 plot(betadisper.host, axes = c(1,2), ellipse = FALSE, segments = FALSE, lty = "solid", label = TRUE, 
@@ -573,21 +623,27 @@ distances_AM2 <- data.frame(
   DistanceToCentroid = betadisper.host$distances
 )
 
-centroid_plot_AM2 <- ggplot(distances_AM2, aes(x = Host, y = DistanceToCentroid, fill = Host)) +
+
+distances_AM2$Host_ID <- distances_AM2$Host
+
+distances_AM2 <- merge(distances_AM2, taxa, by  = "Host_ID")
+
+
+centroid_plot_AM2 <- ggplot(distances_AM2, aes(x = sci_name, y = DistanceToCentroid, fill = sci_name)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.7) +
   geom_jitter(width = 0.15, size = 1.5, alpha = 0.6) +
   theme_minimal(base_size = 14) +
   labs(x = "",
        y = "Distance to Centroid") +
   scale_fill_manual(values=AM_hosts, 
-                      name="Host",
-                      breaks=c("ALRU", "TABR", "THPL"),
-                      labels=c("ALRU", "TABR", "THPL")) +
+                      name="Host Tree Species",
+                      breaks=c("A. rubra", "T. brevifolia", "T. plicata"),
+                      labels=c("A. rubra", "T. brevifolia", "T. plicata")) +
   theme(legend.position = "right") +
   theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
-  theme(legend.text = element_text(colour="black", size = 12)) +
-  theme(axis.text.x = element_text(colour="black", size = 14),
+  theme(legend.text = element_text(colour="black", size = 12, face = "italic")) +
+  theme(axis.text.x = element_text(colour="black", size = 14, face = "italic"),
         axis.text.y = element_text(colour="black", size = 14)) +
   guides(
     color = guide_legend(order = 1),
@@ -605,11 +661,12 @@ permanova.host
 
 # INTERPRETATION 
 
-# There are significant differences in the beta dispersion of communities between sites and host tree taxa 
+# There are significant differences in the beta dispersion of communities between sites, but none between host tree taxa 
 # The distance to centroid values for the tree communities are related to some environmental variables, but 
 # simple linear relationships are an over-simplification here. 
 
 ########################################################################################
+
 
 ############################################## -- 
 # (4) GATHER SIGNIFICANT RESULTS OF INTEREST  
