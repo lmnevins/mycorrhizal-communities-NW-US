@@ -87,7 +87,7 @@ print(high_cor_df)
 
 env <- rownames_to_column(env, "Tree")
 
-env_sub <- dplyr::select(env, Tree, lat, elev, mean_precip_mm, mean_summer_precip_mm, MAT, pct_N, 
+env_sub <- dplyr::select(env, Tree, elev, mean_precip_mm, mean_summer_precip_mm, MAT, pct_N, 
                          ph, Sand, avg_July_SPEI, count_mod_dry)
 
 env_sub <- column_to_rownames(env_sub, "Tree")
@@ -130,9 +130,6 @@ null_model <- vegan::capscale(aitchison_EM ~ 1, data = env_scaled)
 # Full model
 full_model <- vegan::capscale(aitchison_EM ~ ., data = env_scaled)
 
-# Still getting a bit of redundancy in the drought variables, but leaving them for now because I 
-# am interested in these still as being biologically important 
-
 # Forward selection
 step_result <- ordistep(null_model, scope = formula(full_model), direction = "forward", permutations = 9999)
 
@@ -144,7 +141,7 @@ step_result
 step_result$anova
 
 
-# pct_N + ph + lat + avg_July_SPEI + Sand + mean_precip_mm + count_mod_dry + elev + mean_summer_precip_mm
+# pct_N + ph + mean_precip_mm + Sand + avg_July_SPEI + count_mod_dry + elev + mean_summer_precip_mm + MAT
 
 
 # Save model if needed again 
@@ -161,8 +158,8 @@ mod_data <- merge(hosts, env_scaled, by = "row.names")
 #performing the dbRDA
 
 #using just the 9 variables selected with forward selection plus host_ID
-EM_RDA <- capscale(formula = aitchison_EM ~ Host_ID + pct_N + ph + lat + avg_July_SPEI + Sand + 
-                     mean_precip_mm + count_mod_dry + elev + mean_summer_precip_mm, 
+EM_RDA <- capscale(formula = aitchison_EM ~ Host_ID + pct_N + ph + mean_precip_mm + Sand + avg_July_SPEI + 
+                     count_mod_dry + elev + mean_summer_precip_mm + MAT, 
                    mod_data, distance = "euclidean", sqrt.dist = FALSE,
                    comm = NULL, add = FALSE, metaMDSdist = FALSE)
 
@@ -181,8 +178,11 @@ adjusted_p <- p.adjust(raw_p, method = "bonferroni")
 anova_results$Adjusted_P <- adjusted_p
 print(anova_results)
 
-# Only Host_ID (0.01), lat (0.02), sand (0.01), mean_precip (0.03), 
-# count_mod_dry (0.01), mean summer precip (0.01), and elev (0.01) significant after p-value adjustment 
+# Only Host_ID (0.01), pH (0.01), mean_precip (0.01), sand (0.05), avg_July_SPEI (0.01),
+# count_mod_dry (0.01), elev (0.01), mean summer precip (0.02), and MAT (0.01) significant after p-value adjustment 
+
+# Not including sand in the model because it is marginal 
+
 
 summary(EM_RDA)
 
@@ -191,21 +191,21 @@ screeplot(EM_RDA)
 EM_RDA
 
 # Partitioning of mean squared Euclidean distance:
-#                 Inertia Proportion
-# Total          3503.0    1.00000
-# Constrained     285.3    0.08145
-# Unconstrained  3217.7    0.91855
+# #               Inertia Proportion Rank
+# Total         3.503e+03  1.000e+00     
+# Constrained   2.861e+02  8.168e-02   15
+# Unconstrained 3.217e+03  9.183e-01  355
 
-# 8.1% of the variance is explained by the environmental variables and host 
+# 8.2% of the variance is explained by the environmental variables and host 
 # Inertia = total variation in the data 
 
 #                         CAP1    CAP2     
-# Eigenvalue            70.5844 42.1546 
-# Proportion Explained   0.2474  0.1478  
-# Cumulative Proportion  0.2474  0.3952
+# Eigenvalue            70.388   42.1563
+# Proportion Explained   0.246   0.1473 
+# Cumulative Proportion  0.246   0.3934
 
 
-#First axis explained 24.7% of the variation explained by the overall model (8.1%)
+#First axis explained 24.6% of the variation explained by the overall model (8.2%)
 
 
 plot(EM_RDA)
@@ -250,16 +250,16 @@ sites <- c(15,16,17,18)
 
 
 # Change vector names to something cleaner 
-env_df$Variable <- c("ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE", "Pct_N", "pH", "Lat", "SPEI", "Sand", 
-                     "MAP", "Mod_Dry", "Elev", "MSP")
+env_df$Variable <- c("ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE", "Pct_N", "pH", "MAP", "Sand", "SPEI", 
+                     "Mod_Dry", "Elev", "MSP", "MAT")
 
 
-# Keep only significant factors, so remove pH and SPEI 
+# Keep only significant factors, so remove Pct_N
 env_df$Variable <- as.factor(env_df$Variable)
 
 env_df_filt <- env_df %>%
-  filter(Variable != "pH") %>%
-  filter(Variable != "SPEI") %>%
+  filter(Variable != "Pct_N") %>%
+  filter(Variable != "Sand") %>%
   droplevels()
 
 
@@ -283,8 +283,8 @@ p <- ggplot() +
                       breaks=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE"),
                       labels=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE")) +
   theme_bw() +
-  labs(x = "CAP1 (24.74%)", # Remember to update to new values! 
-       y = "CAP2 (14.78%)", # Remember to update to new values! 
+  labs(x = "CAP1 (24.60%)", # Remember to update to new values! 
+       y = "CAP2 (14.73%)", # Remember to update to new values! 
        color = "Site") +
   coord_cartesian()  +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
@@ -301,7 +301,7 @@ p
 
 # INTERPRETATION
 
-# This is explaining 8.1% of the variation
+# This is explaining 8.2% of the variation
 
 ############
 
