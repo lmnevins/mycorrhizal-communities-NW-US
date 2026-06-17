@@ -10,6 +10,11 @@
 #                     ggplot2 v 3.5.1
 #                     cowplot v 1.2.0
 #                     lubridate v 1.9.4
+#                     ggord v 1.1.8
+#                     ggordiplots v 0.4.3
+#                     ggvegan v 0.2.1
+#                     plotly v 4.11.0
+#                     ggrepel v 0.9.7
 #                     
 # ---------------------------------------------------------------------------------------------#
 
@@ -19,7 +24,12 @@ library(dplyr); packageVersion("dplyr")
 library(vegan); packageVersion("vegan")
 library(ggplot2); packageVersion("ggplot2")
 library(cowplot); packageVersion("cowplot")
-require(lubridate); packageVersion("lubridate")
+library(lubridate); packageVersion("lubridate")
+library(ggord); packageVersion("ggord")
+library(ggordiplots); packageVersion("ggordiplots")
+library(ggvegan); packageVersion("ggvegan")
+library(plotly); packageVersion("plotly")
+library(ggrepel); packageVersion("ggrepel")
 
 ###############################################################################################
 #                                       Main workflow                                         #
@@ -736,6 +746,203 @@ ORCA_climate_plots_2 <- plot_grid(South_03, South_05, South_06,
                                   align = "hv", hjust = -0.1)
 
 ORCA_climate_plots_2
+
+
+
+###############################################################################################
+
+############################################### --
+# (4) GET MAIN AXES OF SITE ENVIRO VARIATION  
+############################################### --
+
+## Do PCAs for both AM and ECM hosts to get main axes of environmental variation across sites 
+
+# Can then use the axis values for each tree in models of the effects of site environment and 
+# host identity on the fungal community composition
+
+
+# Load in the sample data file containing the subset of environmental data 
+AM_env <- read.csv(file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/AM_enviro_all_2025.csv")
+
+ECM_env <- read.csv(file = "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/FINAL/EM_enviro_no_THPL.csv")
+
+
+# Subset environmental datasets to remove some of the soil micronutrient data that is not of interest right now 
+
+AM_env <- dplyr::select(AM_env, Sample_ID, Site, Host_ID, Field_ID, Location, elev, mean_precip_mm, 
+                        mean_summer_precip_mm, MAT, pct_N, pct_C, org_matter, ph, Sand, Silt, Clay, avg_July_SPEI, 
+                        count_mod_dry, apr1_SWE)
+
+
+ECM_env <- dplyr::select(ECM_env, Sample_ID, Site, Host_ID, Field_ID, Location, elev, mean_precip_mm, 
+                        mean_summer_precip_mm, MAT, pct_N, pct_C, org_matter, ph, Sand, Silt, Clay, avg_July_SPEI, 
+                        count_mod_dry, apr1_SWE)
+
+
+# Stack these to get all locations 
+all_env <- rbind(AM_env, ECM_env)
+
+
+all_env <- dplyr::select(all_env, Site, Field_ID, Location, elev, mean_precip_mm, mean_summer_precip_mm, MAT, pct_N, 
+                         pct_C, org_matter, ph, Sand, Silt, Clay, avg_July_SPEI, count_mod_dry, apr1_SWE)
+
+
+all_env <- all_env %>% distinct(Field_ID, .keep_all = TRUE)
+
+
+
+################ --
+## ALL SITES ## 
+############### -- 
+
+#PCA of environmental variation across sites 
+pca_all_enviro = prcomp(all_env[4:17], center = T, scale = T)
+
+sd.pca_all_enviro = pca_all_enviro$sdev
+loadings.pca_all_enviro = pca_all_enviro$rotation
+names.pca_all_enviro = colnames(all_env[4:17])
+scores.pca_all_enviro = as.data.frame(pca_all_enviro$x)
+scores.pca_all_enviro$Site = all_env$Site
+scores.pca_all_enviro$Field_ID = all_env$Field_ID
+scores.pca_all_enviro$Location = all_env$Location
+summary(pca_all_enviro)
+
+
+
+# PCA scores are 'scores.pca_all_enviro' with column for different grouping variables 
+
+loadings.pca_all_enviro <- as.data.frame(loadings.pca_all_enviro)
+
+# get proportion of variance explained to add to each axis label 
+pca_var <- pca_all_enviro$sdev^2  # Eigenvalues (variance of each PC)
+pca_var_explained <- pca_var / sum(pca_var) * 100  # Convert to percentage
+
+
+#set colors for sites
+palette <- c("#580E70", "#47E5BB", "#F8BD4B", "#9D072C")
+
+# Shapes for Field_IDs
+
+# North_01  North_02  North_03  WFDP  Andrews_01  Andrews_02  South_01  South_02  South_03  South_04 
+# South_05  South_06  South_07 
+Field_ID_code <- c(15, 0, 7, 16, 17, 2, 23, 5, 9, 11, 13, 4, 8) 
+
+
+# Change loadings names to something cleaner 
+new_loadings <- c("Elev", "MAP", "MSP", "MAT", "Pct_N", "Pct_C", "Org_Matter", "pH", "Sand", 
+                  "Silt", "Clay", "SPEI", "Mod_Dry", "SWE")
+rownames(loadings.pca_all_enviro) <- new_loadings
+
+
+# Plot the Results by site alone
+PCA_plot_all_enviro <- ggplot(scores.pca_all_enviro, aes(x = PC1, y = PC2, color = Site)) +
+  geom_point(size = 3, aes(shape = Field_ID)) +
+  geom_segment(data = loadings.pca_all_enviro, aes(x = 0, y = 0, xend = PC1 * 10, yend = PC2 * 10),
+               arrow = arrow(length = unit(0.2, "cm")), color = "black") + 
+  geom_text_repel(data = loadings.pca_all_enviro, aes(x = PC1 * 11, y = PC2 * 11, label = rownames(loadings.pca_all_enviro)),
+                  color = "black", size = 5, max.overlaps = 10) +
+  theme_minimal(base_size = 14) +
+  scale_colour_manual(values=palette, 
+                      name="Site",
+                      breaks=c("Northern", "WFDP", "Andrews", "Southern"),
+                      labels=c("Northern", "WFDP", "Andrews", "Southern")) +
+  scale_shape_manual(values=Field_ID_code, 
+                     name="Field ID",
+                     breaks=c("North_01", "North_02", "North_03", "WFDP", "Andrews_01", "Andrews_02", "South_01",
+                              "South_02", "South_03", "South_04", "South_05", "South_06", "South_07"),
+                     labels=c("North_01", "North_02", "North_03", "WFDP", "Andrews_01", "Andrews_02", "South_01",
+                              "South_02", "South_03", "South_04", "South_05", "South_06", "South_07")) +
+  labs(x = paste0("PC1 (", round(pca_var_explained[1], 1), "%)"),
+       y = paste0("PC2 (", round(pca_var_explained[2], 1), "%)")) +
+  theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
+  theme(legend.title = element_text(colour="black", size=14, face="bold")) +
+  theme(legend.text = element_text(colour="black", size = 14)) +
+  theme(axis.text.x = element_text(colour="black", size = 14),
+        axis.text.y = element_text(colour="black", size = 14)) +
+  guides(
+    color = guide_legend(order = 1),
+    shape = guide_legend(order = 2)) + 
+  theme(legend.position = "right")
+
+PCA_plot_all_enviro
+
+
+
+##Broken-Stick test for the significance of the loadings
+print(pca_all_enviro)
+
+plot(pca_all_enviro, type = "l")
+
+
+ev = pca_all_enviro$sdev^2
+
+evplot = function(ev) {
+  # Broken stick model (MacArthur 1957)
+  n = length(ev)
+  bsm = data.frame(j=seq(1:n), p=0)
+  bsm$p[1] = 1/n
+  for (i in 2:n) bsm$p[i] = bsm$p[i-1] + (1/(n + 1 - i))
+  bsm$p = 100*bsm$p/n
+  # Plot eigenvalues and % of variation for each axis
+  op = par(mfrow=c(2,1),omi=c(0.1,0.3,0.1,0.1), mar=c(1, 1, 1, 1))
+  barplot(ev, main="Eigenvalues", col="bisque", las=2)
+  abline(h=mean(ev), col="red")
+  legend("topright", "Average eigenvalue", lwd=1, col=2, bty="n")
+  barplot(t(cbind(100*ev/sum(ev), bsm$p[n:1])), beside=TRUE, 
+          main="% variation", col=c("bisque",2), las=2)
+  legend("topright", c("% eigenvalue", "Broken stick model"), 
+         pch=15, col=c("bisque",2), bty="n")
+  par(op)
+}
+
+evplot(ev)
+
+## Screenshots of these outputs were saved 
+
+
+
+summary(pca_all_enviro)
+
+#can safely retain first two - PC1, PC2, and maybe the third one too 
+
+# figure out which environmental factors were most strongly associated with the first two PC's
+
+# Get top 4 variables for PC1
+top_PC1 <- loadings.pca_all_enviro[order(abs(loadings.pca_all_enviro$PC1), decreasing = TRUE), ][1:4, ]
+
+# Get top 4 traits for PC2
+top_PC2 <- loadings.pca_all_enviro[order(abs(loadings.pca_all_enviro$PC2), decreasing = TRUE), ][1:4, ]
+
+# Get top 4 traits for PC3
+top_PC3 <- loadings.pca_all_enviro[order(abs(loadings.pca_all_enviro$PC3), decreasing = TRUE), ][1:4, ]
+
+
+# PC1 is showing a spread according to Mod_dry, MAP, Sand, and Silt. Essentially precipitation and then
+# soil texture. This spread is really mainly between a few of the southern sites.  
+
+# PC2 is showing a spread according to Pct_N, Pct_C, Org_Matter and SPEI. Essentially soil properties and drought conditions. 
+# This one is very strongly driven by WFDP with low values, which was the site with the highest soil C and organic matter 
+# content, and then South_06 which was the ALRU riverbed site that had essentially no organic matter in the soil. 
+
+# PC3 is showing a spread according to SWE, MSP, Clay, and MAT. So climate, snow conditions, and then clay content 
+# that can also relate to water holding in the soil. 
+
+# Grab PC1, PC2, and PC3 for each Field_ID
+all_enviro_PCs <- dplyr::select(scores.pca_all_enviro, PC1, PC2, PC3, Site, Field_ID, Location)
+
+# Save this file for later 
+write.csv(all_enviro_PCs, "~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/PCA_Outputs/all_enviro_PCs.csv")
+
+
+###############################################################################################
+
+################################ --
+# (5) ORGANIZE ENVIRO PCA PLOTS
+################################ --
+
+# Save all environmental factors PCA
+ggsave("~/Dropbox/WSU/Mycorrhizae_Project/Community_Analyses/PCA_Outputs/all_enviro_PCA.png", 
+       plot = PCA_plot_all_enviro, width = 7.5, height = 6.5, units = "in", dpi = 300)
 
 
 
