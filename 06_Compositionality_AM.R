@@ -1,7 +1,13 @@
 # -----------------------------------------------------------------------------#
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
 # Transforming AM phyloseq data and doing compositional analyses
+#
 # Original Author: L. McKinley Nevins 
+#
 # April 21, 2025
+#
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
 #                     phyloseq v 1.48.0

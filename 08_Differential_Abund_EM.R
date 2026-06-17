@@ -1,7 +1,13 @@
 # -----------------------------------------------------------------------------#
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
 # Differential Abundance Analyses for EM Communities using ALDEx2
+#
 # Original Author: L. McKinley Nevins 
+#
 # July 15, 2025
+#
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
 #                     phyloseq v 1.48.0

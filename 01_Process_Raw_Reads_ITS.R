@@ -1,7 +1,12 @@
 # -----------------------------------------------------------------------------#
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
 # Processing raw ITS amplicon reads
+#
 # Original Author: Geoffrey Zahn
-# Modified by: L. McKinley Nevins
+# Adapted by: L. McKinley Nevins
+# 
 # Software versions:  R v 3.6.3
 #                     tidyverse v 1.3.2
 #                     dada2 v 1.18.0
@@ -14,8 +19,9 @@
 
 #################################################################################
 #                               Main workflow                                   #
-# Filter and trim, denoise, sample inference, chimera and contaminant removal, # 
+# Filter and trim, denoise, sample inference, chimera and contaminant removal,  # 
 # taxonomic assignment, combine sequence table and metadata                     #
+#                                                                               #
 #################################################################################
 
 # PACKAGES, SCRIPTS, AND SETUP ####
@@ -267,3 +273,4 @@ saveRDS(taxa, file = "./output/ITS_Taxonomy_from_dada2.RDS")
 
 ##############################################################
 
+## -- END -- ## 

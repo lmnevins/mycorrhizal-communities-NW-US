@@ -1,7 +1,13 @@
 # -----------------------------------------------------------------------------#
-# Chapter 2: Perform analyses on EM community functional composition
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
+# Perform analyses on EM community functional composition
+#
 # Original Author: L. McKinley Nevins 
+#
 # December 16, 2025
+#
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
 #                     dplyr v 1.1.4

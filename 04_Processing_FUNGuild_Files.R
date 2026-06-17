@@ -1,8 +1,14 @@
 # -----------------------------------------------------------------------------#
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
 # Process the assigned FUNGuild objects for EM and AM communities
+#
 # Original Author: L. McKinley Nevins 
+#
 # March 11, 2025 for AM
 # December 14, 2025 for ITS (EM)
+#
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
 #                     phyloseq v 1.48.0
@@ -13,7 +19,7 @@
 library(tidyverse); packageVersion("tidyverse")
 library(phyloseq); packageVersion("phyloseq")
 library(vegan); packageVersion("vegan")
-
+ g
 
 #################################################################################
 #                               Main workflow                                   #

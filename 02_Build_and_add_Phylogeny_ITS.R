@@ -1,7 +1,14 @@
 # -----------------------------------------------------------------------------#
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
 # Building and adding a phylogeny to the cleaned phyloseq object
+#
 # Original Author: Geoffrey Zahn
-# Modified by: L. McKinley Nevins
+# Adapted by: L. McKinley Nevins
+#
+# April 2, 2025
+#
 # Software versions:  R v 3.6.3
 #                     tidyverse v 1.3.0
 #                     vegan v 2.5.6
@@ -16,8 +23,7 @@
 #                               Main workflow                                   #
 # Perform multiple sequence alignment of all ASVs, build distance matrix,       # 
 # construct and refine a phylogenetic tree, add the tree to the phyloseq object #
-#           With larger data sets, this can be a long process...                #
-# Further, proper phylogenetics is beyond the scope of this tutorial.           #
+#                                                                               #
 #################################################################################
 
 # Packages and functions ####
@@ -30,10 +36,8 @@ library(ape); packageVersion("ape")
 library(seqinr); packageVersion("seqinr")
 
 ################
-### These steps were performed on Kamiak, so the final PS object with the tree will be 
-# read in below 
-
-
+### These steps were performed on the WSU Kamiak high performance computing cluster, 
+# so the final PS object with the tree will be read in below 
 
 # Read in phyloseq object from first script output ####
 ps_ITS <- readRDS("./ITS_ps_not-cleaned.RDS")
@@ -92,3 +96,6 @@ saveRDS(ps2, "./ITS_ps_not-cleaned_w_tree.RDS")
 ps2
 plot_tree(ps2,color = "Genus")
 ps2@tax_table[,6]
+
+
+## -- END -- ## 

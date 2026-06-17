@@ -1,7 +1,14 @@
 # -----------------------------------------------------------------------------#
-# Microbiome analysis workshop
-# Processing raw amplicon reads
-# Author: Geoffrey Zahn
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
+# Processing raw amplicon reads from sampled host trees using AM-specific primers
+#
+# Original Author: Geoffrey Zahn
+# Adapted by: L. McKinley Nevins
+# 
+# April 2, 2025
+#
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
 #                     dada2 v 1.32.0
@@ -10,12 +17,13 @@
 #                     ShortRead v 1.62.0
 # -----------------------------------------------------------------------------#
 
-#############################################################
-#### This script calls cutadapt to remove any primers    ####
-#### You must have cutadapt installed on your system     ####
-#### and present in your PATH. See cutadapt installation ####
-#### documents for instructions.                         ####
-#############################################################
+################################################################################
+#                               Main workflow                                  #
+# This script calls cutadapt to remove any primers. You must have cutadapt     #
+# installed on your system and present in your PATH. See cutadapt installation #
+# documents for instructions.                                                  #
+#                                                                              #
+################################################################################
 
 # PACKAGES, SCRIPTS, AND SETUP ####
 
@@ -113,3 +121,5 @@ rbind(FWD.ForwardReads = sapply(FWD.orients, primerHits, fn = fnFs.cut[[1]]),
       REV.ReverseReads = sapply(REV.orients, primerHits, fn = fnRs.cut[[1]]))
 
 # showing that anything remaining has been removed 
+
+## -- END -- ## 

@@ -1,8 +1,13 @@
-# ---------------------------------------------------------------------------------------------#
+## -----------------------------------------------------------------------------#
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
 # Process 30 year Normals (1990-2020) climate data for study sites and sub sites 
 # 
 # Original Author: L. McKinley Nevins 
+#
 # January 5, 2026
+# 
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
 #                     dplyr v 1.1.4

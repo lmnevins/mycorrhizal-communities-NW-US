@@ -1,8 +1,14 @@
 # -----------------------------------------------------------------------------#
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
 # Clean AM phyloseq object and prepare for FUNGuild 
+#
 # Original Author: Geoffrey Zahn
-# Modified by: L. McKinley Nevins 
+# Adapted by: L. McKinley Nevins
+#
 # March 10, 2025
+#
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
 #                     ShortRead v 1.62.0
@@ -155,5 +161,4 @@ write.csv(AM_table, "./FUNGuild/AM_OTU_table_2025.csv")
 #to double check it, and delete that first column. 
 
 
-
-
+## -- END -- ##

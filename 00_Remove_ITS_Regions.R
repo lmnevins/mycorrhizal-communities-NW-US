@@ -1,7 +1,14 @@
 # -----------------------------------------------------------------------------#
-# Microbiome analysis workshop
-# Processing raw amplicon reads
-# Author: Geoffrey Zahn
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+
+# Processing raw amplicon reads from sampled host trees targetting ITS region
+#
+# Original Author: Geoffrey Zahn
+# Adapted by: L. McKinley Nevins
+#
+# April 2, 2025
+#
 # Software versions:  R v 3.6.3
 #                     tidyverse v 1.3.0
 #                     dada2 v 1.18.0
@@ -12,12 +19,13 @@
 #                     patchwork v 1.0.1
 # -----------------------------------------------------------------------------#
 
-##################################################################
-#### This script calls cutadapt to remove flanking ITS regions ####
-#### You must have cutadapt installed on your system           ####
-#### and present in your PATH. See cutadapt installation       ####
-#### documents for instructions.                               ####
-##################################################################
+################################################################################
+#                               Main workflow                                  #
+# This script calls cutadapt to remove any primers. You must have cutadapt     #
+# installed on your system and present in your PATH. See cutadapt installation #
+# documents for instructions.                                                  #
+#                                                                              #
+################################################################################
 
 # PACKAGES, SCRIPTS, AND SETUP ####
 library(tidyverse); packageVersion("tidyverse")
@@ -114,3 +122,5 @@ rbind(FWD.ForwardReads = sapply(FWD.orients, primerHits, fn = fnFs.cut[[1]]),
 
 #all gone now
 #these end up in a cutadapt file now, which should be used for downstream applications
+
+## -- END -- ## 

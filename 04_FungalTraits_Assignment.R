@@ -1,7 +1,13 @@
 # -----------------------------------------------------------------------------#
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
 # Use FungalTraits to assign functional guilds to ITS ASVs
+#
 # Original Author: L. McKinley Nevins 
+#
 # August 7, 2025 
+#
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
 #                     phyloseq v 1.48.0

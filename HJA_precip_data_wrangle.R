@@ -1,7 +1,13 @@
-# -----------------------------------------------------------------------------#
+## -----------------------------------------------------------------------------#
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
 # Process precipitation data from H.J. Andrews Forest meteorological stations
+#
 # Original Author: L. McKinley Nevins 
+#
 # July 18, 2025
+#
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
 #                     dplyr v 1.1.4
@@ -106,3 +112,4 @@ summer_precip <- precip_clean %>%
 # Low elevation summer average is 104.7 mm 
 # high elevation summer average is 169.3 mm 
 
+## -- END -- ## 

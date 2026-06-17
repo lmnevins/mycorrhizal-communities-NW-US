@@ -1,7 +1,12 @@
 # -----------------------------------------------------------------------------#
-# Microbiome analysis workshop
-# Processing raw amplicon reads
-# Author: Geoffrey Zahn
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
+# Processing raw amplicon reads from sampled host trees targetting ITS region
+#
+# Original Author: Geoffrey Zahn
+# Adapted by: L. McKinley Nevins
+#
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
 #                     dada2 v 1.32.0
@@ -16,8 +21,9 @@
 
 #################################################################################
 #                               Main workflow                                   #
-# Filter and trim, denoise, sample inference, chimera and contaminant removal, # 
+# Filter and trim, denoise, sample inference, chimera and contaminant removal,  # 
 # taxonomic assignment, combine sequence table and metadata                     #
+#                                                                               #
 #################################################################################
 
 # PACKAGES, SCRIPTS, AND SETUP ####
@@ -271,3 +277,5 @@ AM_ps <- phyloseq(otu,met,tax)
 saveRDS(AM_ps,"./AM_ps_not-cleaned_2025.RDS")
 AM_ps
 
+
+## -- END -- ## 

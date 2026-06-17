@@ -1,9 +1,15 @@
 # -----------------------------------------------------------------------------#
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
 # Take EM and AM communities from FungalTraits and FunGuild processing to 
 # guilds and subset to target host tree taxa
+#
 # Original Author: L. McKinley Nevins 
+#
 # March 11, 2025 for AM
 # December 15, 2025 for EM
+#
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
 #                     phyloseq v 1.48.0
@@ -185,3 +191,4 @@ EM_tax <- as.data.frame(EM_tax)
 
 write.csv(EM_tax, "./FINAL/EM_subset_tax_2025.csv")
 
+## -- END -- ## 

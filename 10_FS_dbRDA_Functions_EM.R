@@ -1,9 +1,16 @@
-# -----------------------------------------------------------------------------#
+## -----------------------------------------------------------------------------#
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
 # Forward selection and dbRDA of environmental variables and their impact 
 # on functions of EM communities
+#
 # Original author: L. McKinley Nevins 
+#
 # Following: https://www.davidzeleny.net/anadat-r/doku.php/en:forward_sel_examples
+#
 # December 16, 2025
+#
 # Software versions:  R v 4.2.1
 #                     tidyverse v 2.0.0
 #                     phyloseq v 1.48.0

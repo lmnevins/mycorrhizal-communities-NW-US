@@ -1,7 +1,13 @@
 # -----------------------------------------------------------------------------#
-# Chapter 2: Explore and visualize EM community functional variation 
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
+# Explore and visualize EM community functional variation 
+#
 # Original Author: L. McKinley Nevins 
+#
 # December 16, 2025
+#
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
 #                     dplyr v 1.1.4
@@ -1203,11 +1209,9 @@ tree_fam_south_plot
 
 
 ## Can return to do genus-level plot if desired 
-x
+
 
 
 ## Done visualizing the functional and taxonomic variation across the sites and hosts 
 
 ## -- END -- ## 
-
-

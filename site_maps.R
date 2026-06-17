@@ -1,12 +1,34 @@
-######################################################################
+## -----------------------------------------------------------------------------#
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
 #
-#     Mapping for site locations
+# Mapping for site locations
+# 
+# Original author: L. McKinley Nevins 
+# 
+# August 31, 2023
 #
-#     L. McKinley Nevins, laura.nevins@wsu.edu, 31 Aug., 2023
-#
-##      GNU General Public License, Version 3.0    ###################
+# Software versions:  R v 4.5.2
+#                     tidyverse v 2.0.0
+#                     vegan v 2.7.3
+#                     dplyr v 1.1.4
+# -----------------------------------------------------------------------------#
 
-library(maps)
+# PACKAGES, SCRIPTS, AND SETUP ####
+library(tidyverse); packageVersion("tidyverse")
+library(vegan); packageVersion("vegan")
+library(dplyr); packageVersion("dplyr")
+library(maps); packageVersion("maps")
+
+#################################################################################
+#                               Main workflow                                   #
+#  Test some functionality with making a map of study site locations using the  #
+#  'map' package.                                                               #
+#                                                                               #
+#  UPDATE: ARCHIVED, not used to generate any figures for the project.          # 
+#################################################################################
+
+
 
 #wind river location maps
 maps::map(database = 'world', boundary = TRUE, xlim=c(-135,-107.5), ylim=c(20.0,60.0), col = "darkolivegreen4", interior = TRUE, fill=TRUE)

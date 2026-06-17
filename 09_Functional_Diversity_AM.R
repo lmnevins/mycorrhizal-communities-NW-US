@@ -1,7 +1,13 @@
 # -----------------------------------------------------------------------------#
-# Chapter 2: Merging AM fungal taxonomic data to functions and explore 
+# Project: "Taxonomic and functional composition of mycorrhizal communities respond 
+# differently to host identity and environment"
+#
+# Merging AM fungal taxonomic data to functions and explore 
+#
 # Original Author: L. McKinley Nevins 
+#
 # December 16, 2025
+#
 # Software versions:  R v 4.4.1
 #                     tidyverse v 2.0.0
 #                     dplyr v 1.1.4
