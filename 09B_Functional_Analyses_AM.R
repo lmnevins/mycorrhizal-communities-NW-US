@@ -218,15 +218,10 @@ betadisper_traits_site
 permutest(betadisper_traits_site)
 #groups dispersions are not different
 
-# Permutation test for homogeneity of multivariate dispersions
-# Permutation: free
-# Number of permutations: 999
 # 
-# Response: Distances
 # Df  Sum Sq Mean Sq      F N.Perm Pr(>F)
-# Groups      3   50.65  16.885 0.8992    999  0.449
-# Residuals 126 2366.10  18.779
-
+# Groups      3   50.65  16.885 0.8992    999  0.435
+# Residuals 126 2366.10  18.779    
 
 
 #if the dispersion is different between groups, then examine
@@ -340,26 +335,60 @@ plot(mod.HSD_traits_host)
 # THPL-ALRU = 0.03 *
 
 
+# Extract the p-values from the desired factor (column 4 of the output)
+p_values <- mod.HSD_traits_host$group[, "p adj"]
+
+# Load multcompView and get the compact letter display (CLD)
+library(multcompView)
+cld_letters <- multcompLetters(p_values)
+
+# Extract just the letters
+letters_df <- data.frame(Group = names(cld_letters$Letters), 
+                         Letters = cld_letters$Letters)
+print(letters_df)
+
+
+
+# make dataframe of full species names 
+sci_name <- c("A. rubra", "T. brevifolia", "T. plicata")
+
+Host_ID <- c("ALRU", "TABR", "THPL")
+
+
+taxa <- data.frame(sci_name, Host_ID)
+
+# Merge to all of the files
+
+indiv_meta <- merge(indiv_meta, taxa, by = "Host_ID")
+
+
 # Nicer boxplot 
 distances_AM2 <- data.frame(
   Host = betadisper_traits_host$group,
   DistanceToCentroid = betadisper_traits_host$distances
 )
 
-centroid_plot_AM2 <- ggplot(distances_AM2, aes(x = Host, y = DistanceToCentroid, fill = Host)) +
+
+distances_AM2$Host_ID <- distances_AM2$Host
+
+distances_AM2 <- merge(distances_AM2, taxa, by  = "Host_ID")
+
+
+
+centroid_plot_AM2 <- ggplot(distances_AM2, aes(x = sci_name, y = DistanceToCentroid, fill = sci_name)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.7) +
   geom_jitter(width = 0.15, size = 1.5, alpha = 0.6) +
   theme_minimal(base_size = 14) +
   labs(x = "",
        y = "Distance to Centroid") +
   scale_fill_manual(values=AM_hosts, 
-                    name="Host",
-                    breaks=c("ALRU", "TABR", "THPL"),
-                    labels=c("ALRU", "TABR", "THPL")) +
+                    name="Host Tree Species",
+                    breaks=c("A. rubra", "T. brevifolia", "T. plicata"),
+                    labels=c("A. rubra", "T. brevifolia", "T. plicata")) +
   theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
-  theme(axis.text.x = element_text(colour="black", size = 14),
+  theme(axis.text.x = element_text(colour="black", size = 14, face = "italic"),
         axis.text.y = element_text(colour="black", size = 14)) +
   guides(
     color = guide_legend(order = 1),

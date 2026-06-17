@@ -218,7 +218,7 @@ betadisper_traits_site
 
 # This is permutational, so it will give a different p-value each time 
 permutest(betadisper_traits_site)
-#groups dispersions are not different 
+#groups dispersions are different 
 
 # Permutation test for homogeneity of multivariate dispersions
 # Permutation: free
@@ -257,10 +257,10 @@ plot(mod.HSD)
 #                       diff        lwr        upr     p adj
 # Northern-Andrews  -0.4265032 -1.6785164  0.8255100 0.8156702
 # Southern-Andrews   1.0390434 -0.2443883  2.3224751 0.1584617
-# WFDP-Andrews      -2.1120504 -3.4112871 -0.8128137 0.0001997
-# Southern-Northern  1.4655466  0.1790187  2.7520744 0.0182571
-# WFDP-Northern     -1.6855472 -2.9878425 -0.3832519 0.0050869
-# WFDP-Southern     -3.1510938 -4.4836225 -1.8185650 0.0000000
+# WFDP-Andrews      -2.1120504 -3.4112871 -0.8128137 0.0001997 **
+# Southern-Northern  1.4655466  0.1790187  2.7520744 0.0182571 *
+# WFDP-Northern     -1.6855472 -2.9878425 -0.3832519 0.0050869 **
+# WFDP-Southern     -3.1510938 -4.4836225 -1.8185650 0.0000000 ***
 
 # Significant differences 
 
@@ -307,6 +307,20 @@ centroid_plot_EM
 
 ########
 
+
+# make dataframe of full species names 
+sci_name <- c("A. amabilis", "A. grandis", "A. procera", "A. rubra", "P. menziesii", "T. brevifolia", "T. heterophylla")
+
+Host_ID <- c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE")
+
+
+taxa <- data.frame(sci_name, Host_ID)
+
+# Merge to all of the files
+
+indiv_meta <- merge(indiv_meta, taxa, by = "Host_ID")
+
+
 #check betadispersion between host tree taxa 
 betadisper_traits_host <- betadisper(aitchison_EM_traits, indiv_meta$Host_ID, type = "median", sqrt.dist = FALSE)
 
@@ -319,10 +333,10 @@ permutest(betadisper_traits_host)
 # Permutation: free
 # Number of permutations: 999
 # 
-# Response: Distances
-# Df Sum Sq Mean Sq      F N.Perm Pr(>F)  
-# Groups      6  167.8  27.967 2.4715    999  0.023 *
-#   Residuals 364 4119.0  11.316                          
+# # Response: Distances
+# Df Sum Sq Mean Sq      F N.Perm Pr(>F)    
+# Groups      6  359.6  59.935 5.1386    999  0.001 ***
+# Residuals 364 4245.6  11.664                            
 # ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 # # 
@@ -337,33 +351,50 @@ mod.HSD_traits_host <- TukeyHSD(betadisper_traits_host)
 mod.HSD_traits_host
 plot(mod.HSD_traits_host)
 
-# $group
-#               diff       lwr        upr     p adj
-# ABGR-ABAM -0.8888842 -2.750754  0.9729856 0.7932930
-# ABPR-ABAM -0.2738918 -2.240737  1.6929531 0.9996153
-# ALRU-ABAM -0.7346742 -2.714250  1.2449012 0.9277795
-# PSME-ABAM -1.6007388 -3.429383  0.2279053 0.1303818
-# TABR-ABAM -0.9054757 -2.825899  1.0149475 0.8027915
-# TSHE-ABAM -2.0057592 -3.834403 -0.1771151 0.0211773
-# ABPR-ABGR  0.6149924 -1.389802  2.6197863 0.9709402
-# ALRU-ABGR  0.1542100 -1.863075  2.1714949 0.9999886
-# PSME-ABGR -0.7118547 -2.581255  1.1575461 0.9188810
-# TABR-ABGR -0.0165915 -1.975863  1.9426800 1.0000000
-# TSHE-ABGR -1.1168751 -2.986276  0.7525257 0.5682996
-# ALRU-ABPR -0.4607824 -2.575341  1.6537763 0.9951775
-# PSME-ABPR -1.3268471 -3.300823  0.6471284 0.4209263
-# TABR-ABPR -0.6315839 -2.690871  1.4277036 0.9709689
-# TSHE-ABPR -1.7318675 -3.705843  0.2421080 0.1285857
-# PSME-ALRU -0.8660646 -2.852725  1.1205957 0.8551683
-# TABR-ALRU -0.1708014 -2.242251  1.9006485 0.9999822
-# TSHE-ALRU -1.2710850 -3.257745  0.7155753 0.4836228
-# TABR-PSME  0.6952632 -1.232462  2.6229886 0.9366635
-# TSHE-PSME -0.4050204 -2.241332  1.4312910 0.9948479
-# TSHE-TABR -1.1002836 -3.028009  0.8274418 0.6216819
+#                diff        lwr         upr     p adj
+# ABGR-ABAM  0.4464749 -1.4437815  2.33673128 0.9925316
+# ABPR-ABAM  0.6608829 -1.3359491  2.65771494 0.9578171
+# ALRU-ABAM -1.0918872 -3.1016438  0.91786946 0.6754566
+# PSME-ABAM  1.1625870 -0.6939372  3.01911125 0.5106081
+# TABR-ABAM -0.7482025 -2.6979051  1.20149996 0.9160225
+# TSHE-ABAM -1.7504420 -3.6069662  0.10608220 0.0792599
+# ABPR-ABGR  0.2144080 -1.8209516  2.24976770 0.9999244
+# ALRU-ABGR -1.5383621 -3.5864032  0.50967909 0.2835810
+# PSME-ABGR  0.7161122 -1.1817901  2.61401441 0.9221575
+# TABR-ABGR -1.1946774 -3.1838206  0.79446578 0.5619727
+# TSHE-ABGR -2.1969169 -4.0948191 -0.29901464 0.0117858 *
+# ALRU-ABPR -1.7527701 -3.8995681  0.39402787 0.1928758
+# PSME-ABPR  0.5017041 -1.5023672  2.50577546 0.9898082
+# TABR-ABPR -1.4090855 -3.4997695  0.68159855 0.4174982
+# TSHE-ABPR -2.4113249 -4.4153962 -0.40725360 0.0074101 **
+# PSME-ALRU  2.2544742  0.2375247  4.27142378 0.0173760 *
+# TABR-ALRU  0.3436846 -1.7593473  2.44671655 0.9990359
+# TSHE-ALRU -0.6585548 -2.6755044  1.35839472 0.9604967
+# TABR-PSME -1.9107896 -3.8679057  0.04632655 0.0607730
+# TSHE-PSME -2.9130291 -4.7773375 -1.04872064 0.0001021 **
+# TSHE-TABR -1.0022395 -2.9593556  0.95487668 0.7337081
+
 
 # significant differences are 
 
-# TSHE-ABAM = 0.021 * 
+# TSHE-ABGR = 0.011 
+# TSHE-ABPR = 0.007
+# PSME-ALRU = 0.017
+# TSHE-PSME = 0.0001 
+
+
+# Extract the p-values from the desired factor (column 4 of the output)
+p_values <- mod.HSD_traits_host$group[, "p adj"]
+
+# Load multcompView and get the compact letter display (CLD)
+library(multcompView)
+cld_letters <- multcompLetters(p_values)
+
+# Extract just the letters
+letters_df <- data.frame(Group = names(cld_letters$Letters), 
+                         Letters = cld_letters$Letters)
+print(letters_df)
+
 
 
 # Nicer boxplot 
@@ -372,20 +403,28 @@ distances_EM2 <- data.frame(
   DistanceToCentroid = betadisper_traits_host$distances
 )
 
-centroid_plot_EM2 <- ggplot(distances_EM2, aes(x = Host, y = DistanceToCentroid, fill = Host)) +
+
+distances_EM2$Host_ID <- distances_EM2$Host
+
+distances_EM2 <- merge(distances_EM2, taxa, by  = "Host_ID")
+
+
+centroid_plot_EM2 <- ggplot(distances_EM2, aes(x = sci_name, y = DistanceToCentroid, fill = sci_name)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.7) +
   geom_jitter(width = 0.15, size = 1.5, alpha = 0.6) +
   theme_minimal(base_size = 14) +
   labs(x = "",
        y = "Distance to Centroid") +
   scale_fill_manual(values=all_hosts, 
-                    name="Host",
-                    breaks=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE"),
-                    labels=c("ABAM", "ABGR", "ABPR", "ALRU", "PSME", "TABR", "TSHE")) +
+                    name="Host Tree Species",
+                    breaks=c("A. amabilis", "A. grandis", "A. procera", "A. rubra", "P. menziesii", 
+                             "T. brevifolia", "T. heterophylla"),
+                    labels=c("A. amabilis", "A. grandis", "A. procera", "A. rubra", "P. menziesii", 
+                             "T. brevifolia", "T. heterophylla")) +
   theme(axis.line = element_line(color = "black", linewidth = 0.75, linetype = "solid")) +
   theme(legend.title = element_text(colour="black", size=12, face="bold")) +
   theme(legend.text = element_text(colour="black", size = 12)) +
-  theme(axis.text.x = element_text(colour="black", size = 14, angle = 45, vjust = 0.5),
+  theme(axis.text.x = element_text(colour="black", size = 13, angle = 45, vjust = 0.5, face = "italic"),
         axis.text.y = element_text(colour="black", size = 14)) +
   guides(
     color = guide_legend(order = 1),
@@ -455,7 +494,7 @@ centroid_plots <- plot_grid(centroid_plot_EM, centroid_plot_EM2,
 centroid_plots
 
 ggsave("~/Dropbox/WSU/Mycorrhizae_Project/Publication_Materials/Figures/EM_trait_centroids.png", 
-       plot = centroid_plots, width = 5, height = 10, units = "in", dpi = 300)
+       plot = centroid_plots, width = 5.25, height = 10, units = "in", dpi = 300)
 
 
 
